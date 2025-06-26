@@ -1,4 +1,5 @@
 using Assets.RSJWYFamework.Runtiem.Base;
+using Assets.RSJWYFamework.Runtiem.Logger;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -26,9 +27,18 @@ namespace Assets.RSJWYFamework.Runtiem.Boot
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoRegisterModules()
         {
-
             if (!initialized)
             {
+                var _all= GameObject.FindObjectsOfType<ModuleManager>();
+                if( _all.Length!=0)
+                {
+                    throw new APPException("场景中存在多个管理器！！初始化终止");
+                }
+                var _manager = new GameObject("[ModuleManager]");
+                _manager.AddComponent<ModuleManager>();
+                DontDestroyOnLoad( _manager );
+
+
                 // 获取所有带有ModuleAttribute的类型
                 var moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(assembly => assembly.GetTypes())
@@ -60,6 +70,7 @@ namespace Assets.RSJWYFamework.Runtiem.Boot
 
                     module.Initialize();
                 }
+                initialized=true;
             }
         }
         /// <summary>
