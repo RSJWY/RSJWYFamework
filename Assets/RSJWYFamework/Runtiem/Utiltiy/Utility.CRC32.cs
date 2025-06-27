@@ -1,12 +1,10 @@
-﻿using Assets.RSJWYFamework.Runtiem.Logger;
-using System;
-using System.Collections;
+﻿using System;
 using System.IO;
-using UnityEngine;
+using RSJWYFamework.Runtiem.Logger;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
-    public partial class Utiltiy
+    public static  partial class Utiltiy
     {
         public class CRC32
         {
@@ -24,7 +22,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
             {
                 if (bytes == null)
                 {
-                    APPLogger.Error("Bytes is invalid.");
+                    AppLogger.Error("Bytes is invalid.");
                 }
 
                 return GetCrc32(bytes, 0, bytes.Length);
@@ -41,12 +39,12 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
             {
                 if (bytes == null)
                 {
-                    APPLogger.Error("Bytes is invalid.");
+                    AppLogger.Error("Bytes is invalid.");
                 }
 
                 if (offset < 0 || length < 0 || offset + length > bytes.Length)
                 {
-                    APPLogger.Error("Offset or length is invalid.");
+                    AppLogger.Error("Offset or length is invalid.");
                 }
 
                 s_Algorithm.HashCore(bytes, offset, length);
@@ -64,7 +62,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
             {
                 if (stream == null)
                 {
-                    APPLogger.Error("Stream is invalid.");
+                    AppLogger.Error("Stream is invalid.");
                 }
 
                 while (true)
@@ -98,12 +96,12 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
             {
                 if (bytes == null)
                 {
-                    APPLogger.Error("Result is invalid.");
+                    AppLogger.Error("Result is invalid.");
                 }
 
                 if (offset < 0 || offset + 4 > bytes.Length)
                 {
-                    APPLogger.Error("Offset or length is invalid.");
+                    AppLogger.Error("Offset or length is invalid.");
                 }
 
                 bytes[offset] = (byte)((crc32 >> 24) & 0xff);
@@ -116,18 +114,18 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
             {
                 if (stream == null)
                 {
-                    APPLogger.Error("Stream is invalid.");
+                    AppLogger.Error("Stream is invalid.");
                 }
 
                 if (code == null)
                 {
-                    APPLogger.Error("Code is invalid.");
+                    AppLogger.Error("Code is invalid.");
                 }
 
                 int codeLength = code.Length;
                 if (codeLength <= 0)
                 {
-                    APPLogger.Error("Code length is invalid.");
+                    AppLogger.Error("Code length is invalid.");
                 }
 
                 int bytesLength = (int)stream.Length;

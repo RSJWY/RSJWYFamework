@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
     public static partial class Utility
     {

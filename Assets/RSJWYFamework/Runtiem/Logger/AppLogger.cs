@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Logger
+namespace RSJWYFamework.Runtiem.Logger
 {
     public enum LogLevel
     {
@@ -15,7 +10,7 @@ namespace Assets.RSJWYFamework.Runtiem.Logger
         Warning,
         Log,
     }
-    public class APPLogger
+    public class AppLogger
     {
         /// <summary>
         /// 日志输出等级

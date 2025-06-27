@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using UnityEngine;
-
-namespace Assets.RSJWYFamework.Runtiem.Base
+﻿namespace RSJWYFamework.Runtiem.Module
 {
     public interface IModule
     {

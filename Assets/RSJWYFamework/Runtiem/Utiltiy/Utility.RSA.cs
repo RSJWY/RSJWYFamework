@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
     public static partial class Utility
     {

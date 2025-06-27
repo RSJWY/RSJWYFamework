@@ -1,7 +1,6 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
     public static partial class Utility
     {

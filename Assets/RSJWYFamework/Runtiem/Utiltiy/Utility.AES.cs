@@ -1,14 +1,12 @@
-﻿using Assets.RSJWYFamework.Runtiem.Logger;
-using System;
-using System.Collections;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using UnityEngine;
+using RSJWYFamework.Runtiem.Logger;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
-    public partial class Utiltiy
+    public static  partial class Utiltiy
     {
 
         /// <summary>
@@ -49,7 +47,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                             if (headTag == AESHead)
                             {
 #if UNITY_EDITOR
-                                APPLogger.Error($"{path}已经加密过了！");
+                                AppLogger.Error($"{path}已经加密过了！");
 #endif
                                 return;
                             }
@@ -70,7 +68,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                 {
                     //Console.ForegroundColor = ConsoleColor.Red;
                     //RSJWYLogger.LogError(RSJWYFameworkEnum.Utility, $"无法加密文件：\n{e}");
-                    throw new APPException($"无法加密文件：{path}", e);
+                    throw new AppException($"无法加密文件：{path}", e);
                 }
             }
 
@@ -105,7 +103,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                 }
                 catch (Exception e)
                 {
-                    throw new APPException($"无法解密文件：{path}", e);
+                    throw new AppException($"无法解密文件：{path}", e);
                 }
             }
 
@@ -138,7 +136,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                 }
                 catch (Exception e)
                 {
-                    throw new APPException($"无法加密数据", e);
+                    throw new AppException($"无法加密数据", e);
                 }
 
                 return EncBuffer;
@@ -191,7 +189,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                     catch (Exception ex) when (ex is IOException || ex is CryptographicException ||
                                                ex is ArgumentException)
                     {
-                        throw new APPException(ex);
+                        throw new AppException(ex);
                     }
                 }
             }
@@ -244,15 +242,15 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                     }
                     catch (CryptographicException ex)
                     {
-                        throw new APPException ("解密过程中出现加密异常", ex);
+                        throw new AppException ("解密过程中出现加密异常", ex);
                     }
                     catch (IOException ex)
                     {
-                        throw new APPException("解密过程中出现输入输出异常", ex);
+                        throw new AppException("解密过程中出现输入输出异常", ex);
                     }
                     catch (Exception ex)
                     {
-                        throw new APPException("解密过程中发生未知错误", ex);
+                        throw new AppException("解密过程中发生未知错误", ex);
                     }
                 }
 

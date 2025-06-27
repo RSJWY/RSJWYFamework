@@ -1,13 +1,11 @@
-using Assets.RSJWYFamework.Runtiem.Base;
-using Assets.RSJWYFamework.Runtiem.Logger;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using RSJWYFamework.Runtiem.Logger;
 using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Boot
+namespace RSJWYFamework.Runtiem.Module
 {
     /// <summary>
     /// 模块管理器
@@ -32,18 +30,21 @@ namespace Assets.RSJWYFamework.Runtiem.Boot
                 var _all= GameObject.FindObjectsOfType<ModuleManager>();
                 if( _all.Length!=0)
                 {
-                    throw new APPException("场景中存在多个管理器！！初始化终止");
+                    throw new AppException("场景中存在多个管理器！！初始化终止");
                 }
                 var _manager = new GameObject("[ModuleManager]");
                 _manager.AddComponent<ModuleManager>();
                 DontDestroyOnLoad( _manager );
 
 
-                // 获取所有带有ModuleAttribute的类型
-                var moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(assembly => assembly.GetTypes())
-                    .Where(type => type.IsDefined(typeof(ModuleAttribute)) &&
-                                  typeof(IModule).IsAssignableFrom(type));
+                // 1. 反射获取所有实现IModule的类型
+                var moduleTypes = AppDomain.CurrentDomain.GetAssemblies()      // 获取当前应用程序域中加载的所有程序集
+                    .SelectMany(a => a.GetTypes())                       // 获取每个程序集中定义的所有类型
+                    .Where(t =>                                            // 筛选满足以下条件的类型：
+                            t.IsDefined(typeof(ModuleAttribute)) &&  // 1. 标记了AutoRegisterModuleAttribute特性
+                            typeof(IModule).IsAssignableFrom(t) &&           // 2. 实现了IModule接口或继承自IModule
+                            !t.IsAbstract                                      // 3. 不是抽象类
+                    );
 
                 // 收集模块信息并排序
                 var moduleInfos = new List<(Type type, ModuleAttribute attr)>();
@@ -55,22 +56,30 @@ namespace Assets.RSJWYFamework.Runtiem.Boot
 
                 // 按优先级排序
                 moduleInfos = moduleInfos.OrderBy(x => x.attr.Priority).ToList();
-
-                // 实例化并注册模块
-                foreach (var (type, attr) in moduleInfos)
+                
+                //实例化
+                foreach (var moduleInfo in moduleInfos)
                 {
-                    GameObject moduleGO = new GameObject(
-                        string.IsNullOrEmpty(attr.ModuleName) ? type.Name : attr.ModuleName);
+                    IModule moduleI;
+                    if (typeof(MonoBehaviour).IsAssignableFrom(moduleInfo.type))
+                    {
+                        // Unity模块：挂载到GameObject
+                        GameObject moduleGO = new GameObject($"[Module]{moduleInfo.type.Name}");
+                        moduleGO.transform.parent = _manager.transform;
+                        moduleI= moduleGO.AddComponent(moduleInfo.type) as IModule;
+                    }
+                    else
+                    {
+                        moduleI = Activator.CreateInstance(moduleInfo.type) as IModule;
+                    }
 
-                    DontDestroyOnLoad(moduleGO);
-
-                    IModule module = (IModule)moduleGO.AddComponent(type);
-                    _modules[type] = module;
-                    _orderedModules.Add(module);
-
-                    module.Initialize();
+                    _modules[moduleInfo.type] = moduleI;
+                    _orderedModules.Add(moduleI);
+                    moduleI.Initialize();
+                    AppLogger.Log($"初始化模块类：{moduleInfo.type.Name}");
                 }
                 initialized=true;
+                AppLogger.Log($"初始化模块管理器完成！模块数量为：{_modules.Count}");
             }
         }
         /// <summary>
@@ -94,7 +103,7 @@ namespace Assets.RSJWYFamework.Runtiem.Boot
 
         private void Update()
         {
-            timer += Time.deltaTime;
+            timer += Time.unscaledDeltaTime;
             foreach (var module in GetAllModules())
             {
                 module.ModuleUpdate();

@@ -1,12 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Plastic.Newtonsoft.Json;
-using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
-    public partial class Utiltiy
+    public static  partial class Utiltiy
     {
         /// <summary>
         /// 16进制的字符串转为字节数组

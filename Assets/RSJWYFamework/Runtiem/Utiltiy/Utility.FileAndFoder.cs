@@ -1,10 +1,9 @@
-﻿using Assets.RSJWYFamework.Runtiem.Logger;
-using System.Collections;
-using System.IO;
+﻿using System.IO;
 using System.Text;
+using RSJWYFamework.Runtiem.Logger;
 using UnityEngine;
 
-namespace Assets.RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem.Utiltiy
 {
     public static partial class Utility
     {
@@ -122,7 +121,7 @@ namespace Assets.RSJWYFamework.Runtiem.Utiltiy
                 if (Directory.Exists(directory))
                 {
                     Directory.Delete(directory, true);
-                    APPLogger.Log($"Directory '{directory}' deleted.");
+                    AppLogger.Log($"Directory '{directory}' deleted.");
                     return true;
                 }
                 else
