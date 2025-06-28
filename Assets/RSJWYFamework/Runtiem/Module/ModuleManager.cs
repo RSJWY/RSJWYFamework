@@ -109,7 +109,7 @@ namespace RSJWYFamework.Runtiem.Module
                 module.ModuleUpdate();
                 if (timer >= 1f)
                 {
-                    module.ModuleSecondUpdate();
+                    module.ModulePerSecondUpdate();
                 }
             }
             timer -= 1f; // 减去1秒，保留余数

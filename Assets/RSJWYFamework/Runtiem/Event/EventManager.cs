@@ -104,17 +104,6 @@ namespace RSJWYFamework.Runtiem.Event
             FireNow(_call);
         }
 
-        public override void ModuleSecondUpdate()
-        {
-        }
-
-        public override void ModuleFixedUpdate()
-        {
-        }
-
-        public override void ModuleLateUpdate()
-        {
-        }
     }
     
     

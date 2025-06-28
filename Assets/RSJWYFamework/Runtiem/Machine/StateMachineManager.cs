@@ -6,7 +6,7 @@ namespace RSJWYFamework.Runtiem.Machine
 {
     /// <summary>
     /// 状态机生命周期管理器
-    /// 可以把状态机放入本控制器下，自动接管生命周期
+    /// 可以把状态机放入本控制器下，自动接管生命周期。
     /// </summary>
     [Module]
     public class StateMachineManager:ModuleBase
@@ -65,7 +65,7 @@ namespace RSJWYFamework.Runtiem.Machine
         {
         }
 
-        public override void ModuleSecondUpdate()
+        public override void ModulePerSecondUpdate()
         {
             foreach (var procedure in Procedures)
             {
@@ -81,12 +81,6 @@ namespace RSJWYFamework.Runtiem.Machine
             }
         }
 
-        public override void ModuleFixedUpdate()
-        {
-        }
-
-        public override void ModuleLateUpdate()
-        {
-        }
+      
     }
 }

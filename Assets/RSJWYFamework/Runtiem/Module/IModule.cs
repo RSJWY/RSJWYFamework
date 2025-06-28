@@ -17,7 +17,7 @@
         /// <summary>
         /// 模块秒更新
         /// </summary>
-        void ModuleSecondUpdate();
+        void ModulePerSecondUpdate();
         void ModuleFixedUpdate();
         void ModuleLateUpdate();
     }

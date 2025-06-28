@@ -6,9 +6,9 @@ namespace RSJWYFamework.Runtiem.Module
     {
         public abstract void Initialize();
         public abstract void ModuleUpdate();
-        public abstract void ModuleSecondUpdate();
-        public abstract void ModuleFixedUpdate();
-        public abstract void ModuleLateUpdate();
+        public virtual void ModulePerSecondUpdate(){}
+        public virtual void ModuleFixedUpdate(){}
+        public virtual void ModuleLateUpdate(){}
         public abstract void Shutdown();
     }
 
