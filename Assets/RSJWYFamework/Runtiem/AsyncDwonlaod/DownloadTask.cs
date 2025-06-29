@@ -1,7 +1,7 @@
 using System;
 using UnityEngine.Networking;
 
-namespace RSJWYFamework.Runtiem.AsyncDwonlaod
+namespace RSJWYFamework.Runtiem
 {
     public class DownloadTask
     {

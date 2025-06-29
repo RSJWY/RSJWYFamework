@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem.AsyncOperation
+namespace RSJWYFamework.Runtiem
 {
     /// <summary>
     /// 一个干净的，对外部开放的异步操作中间层

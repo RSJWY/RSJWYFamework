@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem
 {
     public static partial class Utility
     {

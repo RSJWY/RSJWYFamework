@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using RSJWYFamework.Runtiem.Logger;
-using RSJWYFamework.Runtiem.Module;
 
-namespace RSJWYFamework.Runtiem.Machine
+namespace RSJWYFamework.Runtiem
 {
     /// <summary>
     /// 状态机生命周期管理器

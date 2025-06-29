@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace RSJWYFamework.Runtiem.Logger
+namespace RSJWYFamework.Runtiem
 {
     public enum LogLevel
     {

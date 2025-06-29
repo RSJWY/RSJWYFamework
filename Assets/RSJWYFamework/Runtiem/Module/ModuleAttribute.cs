@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RSJWYFamework.Runtiem.Module
+namespace RSJWYFamework.Runtiem
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public class ModuleAttribute : Attribute

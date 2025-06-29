@@ -1,4 +1,4 @@
-﻿namespace RSJWYFamework.Runtiem.Module
+﻿namespace RSJWYFamework.Runtiem
 {
     public interface IModule
     {

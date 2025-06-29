@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using RSJWYFamework.Runtiem.Module;
 
-namespace RSJWYFamework.Runtiem.AsyncOperation
+namespace RSJWYFamework.Runtiem
 {
     [Module]
     public class AppOperationSystem:ModuleBase

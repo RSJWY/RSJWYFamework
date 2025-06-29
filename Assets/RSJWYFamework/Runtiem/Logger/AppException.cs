@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace RSJWYFamework.Runtiem.Logger
+namespace RSJWYFamework.Runtiem
 {
     public class AppException : UnityException
     {

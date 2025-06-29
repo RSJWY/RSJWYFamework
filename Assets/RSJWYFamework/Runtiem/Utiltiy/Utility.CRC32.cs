@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
-using RSJWYFamework.Runtiem.Logger;
-
-namespace RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem
 {
+    
     public static  partial class Utiltiy
     {
         public class CRC32

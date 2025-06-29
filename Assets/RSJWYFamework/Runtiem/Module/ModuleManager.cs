@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using RSJWYFamework.Runtiem.Logger;
 using UnityEngine;
 
-namespace RSJWYFamework.Runtiem.Module
+namespace RSJWYFamework.Runtiem
 {
     /// <summary>
     /// 模块管理器
@@ -91,6 +90,7 @@ namespace RSJWYFamework.Runtiem.Module
             {
                 return module as T;
             }
+            AppLogger.Exception(new AppException($"无法获取模块{typeof(T).Name}"));
             return null;
         }
 

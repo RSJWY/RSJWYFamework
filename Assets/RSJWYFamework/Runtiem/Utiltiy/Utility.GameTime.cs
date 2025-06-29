@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem
 {
     //// <summary>
     /// 游戏时间

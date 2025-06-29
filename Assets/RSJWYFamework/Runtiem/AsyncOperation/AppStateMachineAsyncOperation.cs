@@ -1,6 +1,5 @@
-using RSJWYFamework.Runtiem.Machine;
 
-namespace RSJWYFamework.Runtiem.AsyncOperation
+namespace RSJWYFamework.Runtiem
 {
     /// <summary>
     /// 可异步等待的状态机

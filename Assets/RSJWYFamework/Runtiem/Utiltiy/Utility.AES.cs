@@ -2,9 +2,8 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using RSJWYFamework.Runtiem.Logger;
 
-namespace RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem
 {
     public static  partial class Utiltiy
     {

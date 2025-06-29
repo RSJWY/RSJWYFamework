@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem.AsyncOperation
+namespace RSJWYFamework.Runtiem
 {
     /// <summary>
     /// 操作状态

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace RSJWYFamework.Runtiem.Utiltiy
+namespace RSJWYFamework.Runtiem
 {
     public static partial class Utility
     {

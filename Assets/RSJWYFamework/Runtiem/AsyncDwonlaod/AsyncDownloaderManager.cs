@@ -2,13 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using RSJWYFamework.Runtiem.Module;
 using UnityEngine;
 using UnityEngine.Networking;
-using DownloadHandlerFile = RSJWYFamework.Runtiem.AsyncDwonlaod.DownloadHandlerFile;
-using File = UnityEngine.Windows.File;
 
-namespace RSJWYFamework.Runtiem.AsyncDwonlaod
+namespace RSJWYFamework.Runtiem
 {
     [Module]
     public class AsyncDownloaderManager : ModuleBase

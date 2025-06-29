@@ -1,0 +1,22 @@
+{
+    "name": "RSJWYFamework.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:40c921051a04ff44086f993f42971308",
+        "GUID:4129704b5a1a13841ba16f230bf24a57",
+        "GUID:4d1926c9df5b052469a1c63448b7609a",
+        "GUID:2373f786d14518f44b0f475db77ba4de",
+        "GUID:e34a5702dd353724aa315fb8011f08c3"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

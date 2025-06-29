@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using RSJWYFamework.Runtiem.Logger;
-using RSJWYFamework.Runtiem.Utiltiy;
-namespace RSJWYFamework.Runtiem.Machine
+namespace RSJWYFamework.Runtiem
 {
     public class StateMachine
     {
@@ -43,7 +41,7 @@ namespace RSJWYFamework.Runtiem.Machine
         {
             this.Owner = Owner;
             this.Priority = priority;
-            var _name=string.IsNullOrEmpty(name)?Utiltiy.Utiltiy.Timestamp.UnixTimestampMilliseconds.ToString():name;
+            var _name=string.IsNullOrEmpty(name)?Utiltiy.Timestamp.UnixTimestampMilliseconds.ToString():name;
         }
         
         /// <summary>

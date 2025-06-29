@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem.Machine
+namespace RSJWYFamework.Runtiem
 {
     public abstract class StateNodeBase
     {
