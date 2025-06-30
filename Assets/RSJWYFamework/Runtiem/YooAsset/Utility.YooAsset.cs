@@ -139,7 +139,7 @@ namespace RSJWYFamework.Runtiem
 
                 public EncryptRF() : base()
                 {
-                    aeskey = Resources.Load<AppConfig.ProjectConfig>("ProjectConfig").AESKey;
+                    aeskey = Resources.Load<AppConfig>("AppConfig").AESKey;
                 }
 
                 public EncryptResult Encrypt(EncryptFileInfo fileInfo)
@@ -176,7 +176,7 @@ namespace RSJWYFamework.Runtiem
 
                 public EncryptPF() : base()
                 {
-                    aeskey = Resources.Load<AppConfig.ProjectConfig>("ProjectConfig").AESKey;
+                    aeskey = Resources.Load<AppConfig>("AppConfig").AESKey;
                 }
 
                 public EncryptResult Encrypt(EncryptFileInfo fileInfo)

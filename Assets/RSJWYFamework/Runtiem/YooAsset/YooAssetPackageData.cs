@@ -1,21 +1,15 @@
 using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using UnityEngine;
 
 namespace RSJWYFamework.Runtiem
 {
-    [Serializable]
-    public class  YooAssetPackages:DataBaseSB
-    {
-        public List<YooAssetModulePackageData> packages;
-    }
-    
-    
     /// <summary>
     ///包信息参数
     /// </summary>
     [Serializable]
-    public class YooAssetModulePackageData:DataBase
+    public class YooAssetPackageData:DataBase
     {
         [LabelText("包名")]
         [Required("必须输入包名称，程序不做检测")] 

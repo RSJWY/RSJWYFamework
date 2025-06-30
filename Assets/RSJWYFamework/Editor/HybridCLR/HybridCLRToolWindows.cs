@@ -18,6 +18,7 @@ namespace RSJWYFamework.Editor
         [InlineEditor(InlineEditorModes.FullEditor)] 
         [LabelText("配置文件")]
         [ShowInInspector]
+        [ReadOnly]
         public HCLRToolSettingConfig SettingData;
 
 
@@ -90,9 +91,14 @@ namespace RSJWYFamework.Editor
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (SettingData == null)
+            var appSB = UtilityEditor.GetSettingConfigList<HCLRToolSettingConfig>();
+            if (appSB.Count!=1)
             {
-                //SettingData =AssetDatabase.LoadAssetAtPath<HCLRToolSettingConfig>("Assets/RSJWYFamework/Editor/Setting/HCLRToolSetting.asset");
+                AppLogger.Warning($"App配置文件不存在或者不唯一！数量：{appSB.Count}，请手动设置配置文件");
+            }
+            else
+            {
+                SettingData = appSB[0];
             }
             //加载热更dll列表
             //UpdateHotDLLJson();
