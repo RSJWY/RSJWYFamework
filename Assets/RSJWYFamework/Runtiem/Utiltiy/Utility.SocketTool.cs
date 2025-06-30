@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public static partial class Utility
     {

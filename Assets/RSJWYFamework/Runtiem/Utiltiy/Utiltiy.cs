@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public static  partial class Utiltiy
     {

@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 一个干净的，对外部开放的异步操作中间层
@@ -47,7 +47,7 @@ namespace RSJWYFamework.Runtiem
         /// </summary>
         protected bool IsBusy()
         {
-            return AppOperationSystem.IsBusy;
+            return AppAsyncOperationSystem.IsBusy;
         }
 
         /// <summary>

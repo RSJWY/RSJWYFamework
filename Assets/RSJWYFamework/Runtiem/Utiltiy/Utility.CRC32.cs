@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     
     public static  partial class Utiltiy

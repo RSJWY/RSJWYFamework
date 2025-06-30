@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 操作状态

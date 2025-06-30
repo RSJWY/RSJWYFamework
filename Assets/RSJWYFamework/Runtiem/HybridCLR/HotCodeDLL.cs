@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 热更代码json加载

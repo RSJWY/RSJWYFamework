@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 状态机生命周期管理器
@@ -26,7 +26,7 @@ namespace RSJWYFamework.Runtiem
                 Procedures.Add(name,procedureController);
                 if (isAutoRun)
                 {
-                    procedureController.StartProcedure();
+                    procedureController.StartNode();
                 }
             }
         }

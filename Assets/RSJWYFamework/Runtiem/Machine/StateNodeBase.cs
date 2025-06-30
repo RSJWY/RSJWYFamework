@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public abstract class StateNodeBase
     {
@@ -34,11 +34,11 @@ namespace RSJWYFamework.Runtiem
         /// <summary>
         /// 流程帧更新
         /// </summary>
-        public abstract void OnUpdate();
+        public virtual void OnUpdate(){}
 
         /// <summary>
         /// 流程秒更新
         /// </summary>
-        public abstract void OnUpdateSecond();
+        public virtual void OnUpdateSecond(){}
     }
 }

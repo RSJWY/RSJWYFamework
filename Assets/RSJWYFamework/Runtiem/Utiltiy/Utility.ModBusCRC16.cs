@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public static partial class Utility
     {

@@ -3,7 +3,7 @@ using System.Text;
 using UnityEngine;
 using YooAsset;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public static partial class Utiltiy
     {

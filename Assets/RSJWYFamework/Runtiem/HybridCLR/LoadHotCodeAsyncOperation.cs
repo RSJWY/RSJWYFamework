@@ -1,0 +1,60 @@
+﻿
+using System.Collections.Generic;
+using System.Reflection;
+
+namespace RSJWYFamework.Runtime
+{
+    /// <summary>
+    /// 加载热更代码
+    /// </summary>
+    public class LoadHotCodeAsyncOperation:AppGameAsyncOperation
+    {
+        enum RSteps
+        {
+            None,
+            Update,
+            Done
+        }
+        /// <summary>
+        /// 加载到的程序集
+        /// </summary>
+        public Dictionary<string, Assembly> HotCode { get; private set; } = new();
+        private readonly StateMachine _smc;
+        private RSteps _steps = RSteps.None;
+        
+        public LoadHotCodeAsyncOperation()
+        {
+            _smc = new StateMachine(this,"加载热更代码");
+            //创建流程
+            _smc.AddNode(new LoadDLLByteNode());
+            _smc.AddNode(new LoadHotCodeNode());
+            _smc.AddNode(new LoadHotCodeDoneNode());
+            AppAsyncOperationSystem.StartOperation(typeof(LoadHotCodeAsyncOperation).FullName,this);
+        }
+
+        protected override void OnStart()
+        {
+            _steps = RSteps.Update;
+            _smc.StartNode<LoadDLLByteNode>();
+        }
+
+        protected override void OnUpdate()
+        {
+            if (_steps == RSteps.None || _steps == RSteps.Done)
+                return;
+
+            if(_steps == RSteps.Update)
+            {
+                _smc.OnUpdate();
+                if(_smc.GetNowNode() == typeof(LoadHotCodeDoneNode))
+                {
+                    Status = AppAsyncOperationStatus.Succeed;
+                    _steps = RSteps.Done;
+                }
+            }
+        }
+        protected override void OnAbort()
+        {
+        }
+    }
+}

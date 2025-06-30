@@ -1,7 +1,7 @@
 using System;
 using UnityEngine.Networking;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public class DownloadTask
     {

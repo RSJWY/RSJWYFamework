@@ -6,7 +6,7 @@ using HybridCLR.Editor;
 using HybridCLR.Editor.Commands;
 using HybridCLR.Editor.Settings;
 using Newtonsoft.Json;
-using RSJWYFamework.Runtiem;
+using RSJWYFamework.Runtime;
 using UnityEditor;
 using UnityEngine;
 

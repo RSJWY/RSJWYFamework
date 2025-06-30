@@ -1,5 +1,5 @@
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     [Module]
     public class AppConfigManager:ModuleBase

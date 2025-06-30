@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public class StateMachine
     {
@@ -13,12 +13,12 @@ namespace RSJWYFamework.Runtiem
          public uint Priority{ private set; get; }
         
         /// <summary>
-        /// 当前流程
+        /// 当前节点
         /// </summary>
         private StateNodeBase _currentProcedureBase;
         
         /// <summary>
-        /// 任意流程切换事件（上一个离开的流程、下一个进入的流程）
+        /// 任意节点切换事件（上一个离开的节点、下一个进入的节点）
         /// </summary>
         public event Action<StateNodeBase, StateNodeBase> ProcedureSwitchEvent;
         
@@ -28,11 +28,11 @@ namespace RSJWYFamework.Runtiem
         private readonly Dictionary<string, System.Object> blackboard = new (100);
         
         /// <summary>
-        /// 流程表
+        /// 节点表
         /// </summary>
         private readonly Dictionary<Type, StateNodeBase> Procedures = new(100);
         /// <summary>
-        /// 所有流程
+        /// 所有节点
         /// </summary>
         private readonly List<Type> ProcedureTypes = new(100);
 
@@ -104,34 +104,33 @@ namespace RSJWYFamework.Runtiem
         #endregion
 
 
-        #region 流程行为
+        #region 节点行为
 
         /// <summary>
-        /// 获取现在正在执行的流程
+        /// 获取现在正在执行的节点
         /// </summary>
         /// <returns></returns>
-        public Type GetNowProcedure()
+        public Type GetNowNode()
         {
             return _currentProcedureBase.GetType();
         }
         /// <summary>
-        /// 切换到指定流程
+        /// 切换到指定节点
         /// </summary>
-        /// <typeparam name="TProcedureBase">流程类型</typeparam>
-        public void SwitchProcedure<TStateNodeBase>() where TStateNodeBase : StateNodeBase
+        public void SwitchNode<TStateNodeBase>() where TStateNodeBase : StateNodeBase
         {
-            SwitchProcedure(typeof(TStateNodeBase));
+            SwitchNode(typeof(TStateNodeBase));
         }
         
         /// <summary>
-        /// 切换到指定流程
+        /// 切换到指定节点
         /// </summary>
         /// <param name="type"></param>
         /// <exception cref="RSJWYException"></exception>
-        public void SwitchProcedure(Type type)
+        public void SwitchNode(Type type)
         {
             if (type.IsAssignableFrom(typeof(StateNodeBase)))
-                throw new AppException($"切换流程失败：流程 {type.Name} 并非继承自流程基类！");
+                throw new AppException($"切换节点失败：节点 {type.Name} 并非继承自节点基类！");
             if (Procedures.ContainsKey(type))
             {
                 if (_currentProcedureBase == Procedures[type])
@@ -150,61 +149,61 @@ namespace RSJWYFamework.Runtiem
             }
             else
             {
-                throw new AppException( $"切换流程失败：不存在流程 {type.Name} 或者流程未激活！");
+                throw new AppException( $"切换节点失败：不存在节点 {type.Name} 或者节点未激活！");
             }
         }
         /// <summary>
-        /// 切换到下一流程，
-        /// 如果当前是最后一个流程，则切换到第一个流程
+        /// 切换到下一节点，
+        /// 如果当前是最后一个节点，则切换到第一个节点
         /// </summary>
-        public void SwitchNextProcedure()
+        public void SwitchNextNode()
         {
             int index = ProcedureTypes.IndexOf(_currentProcedureBase.GetType());
             if (index >= ProcedureTypes.Count - 1)
             {
-                SwitchProcedure(ProcedureTypes[0]);
+                SwitchNode(ProcedureTypes[0]);
             }
             else
             {
-                SwitchProcedure(ProcedureTypes[index + 1]);
+                SwitchNode(ProcedureTypes[index + 1]);
             }
         }
         /// <summary>
-        /// 开始流程，从指定的开始源开始
+        /// 开始节点，从指定的开始源开始
         /// </summary>
         /// <typeparam name="TStateNodeBase"></typeparam>
-        public void StartProcedure<TStateNodeBase>()
+        public void StartNode<TStateNodeBase>()
         {
-            SwitchProcedure(typeof(TStateNodeBase));
+            SwitchNode(typeof(TStateNodeBase));
         }
         /// <summary>
-        /// 开始流程，从第一个开始
+        /// 开始节点，从第一个开始
         /// </summary>
-        public void StartProcedure()
+        public void StartNode()
         {
-            SwitchProcedure(ProcedureTypes[0]);
+            SwitchNode(ProcedureTypes[0]);
         }
         
         /// <summary>
-        /// 判断一个流程是否存在
+        /// 判断一个节点是否存在
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public bool IsExistProcedur<TStateNodeBase>()where TStateNodeBase : StateNodeBase
+        public bool IsExistNode<TStateNodeBase>()where TStateNodeBase : StateNodeBase
         {
             return Procedures.ContainsKey(typeof(StateNodeBase));
         }
         /// <summary>
-        /// 添加一个流程
+        /// 添加一个节点
         /// </summary>
         /// <param name="procedureBase"></param>
         /// <exception cref="RSJWYException"></exception>
-        public void AddProcedure(StateNodeBase procedureBase)
+        public void AddNode(StateNodeBase procedureBase)
         {
             Type _t = procedureBase.GetType();
             
             if (_t.IsAssignableFrom(typeof(StateNodeBase)))
-                throw new AppException( $"增加流程失败：流程 {_t.Name} 并非继承自流程基类！");
+                throw new AppException( $"增加节点失败：节点 {_t.Name} 并非继承自节点基类！");
             
             if (!Procedures.ContainsKey(_t))
             {
@@ -215,15 +214,15 @@ namespace RSJWYFamework.Runtiem
             }
             else
             {
-                throw new AppException($"添加流程失败：流程 {_t.Name} 已存在！");
+                throw new AppException($"添加节点节点失败：节点 {_t.Name} 已存在！");
             }
         }
         /// <summary>
-        /// 添加一个流程
-        /// 使用本方法必须传递的是一个包含无参构造函数的流程类，否则会抛出异常
+        /// 添加一个节点
+        /// 使用本方法必须传递的是一个包含无参构造函数的节点类，否则会抛出异常
         /// 否则请使用AddProcedure(ProcedureBase procedureBase)传递实例化好的
         /// </summary>
-        public void AddProcedure<TStateNodeBase>() where TStateNodeBase : StateNodeBase,new()
+        public void AddNode<TStateNodeBase>() where TStateNodeBase : StateNodeBase,new()
         {
             var type = typeof(TStateNodeBase);
             var procedure = Activator.CreateInstance<TStateNodeBase>();
@@ -236,15 +235,15 @@ namespace RSJWYFamework.Runtiem
             }
             else
             {
-                throw new AppException($"添加流程失败：流程 {type.Name} 已存在！");
+                throw new AppException($"添加节点失败：节点 {type.Name} 已存在！");
             }
         }
         /// <summary>
-        /// 移除一个流程
+        /// 移除一个节点
         /// </summary>
         /// <param name="type"></param>
         /// <exception cref="RSJWYException"></exception>
-        public void RemoveProcedure(Type type)
+        public void RemoveNode(Type type)
         {
             if (!Procedures.TryGetValue(type,out var procedure))
             {
@@ -258,7 +257,7 @@ namespace RSJWYFamework.Runtiem
             }
             else
             {
-                throw new AppException( $"移除流程失败：流程 {type.Name} 不存在！");
+                throw new AppException( $"移除节点失败：节点 {type.Name} 不存在！");
             }
         }
 

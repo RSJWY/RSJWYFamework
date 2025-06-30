@@ -1,4 +1,4 @@
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 事件内容载体

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     public abstract class ModuleBase :MonoBehaviour, IModule
     {

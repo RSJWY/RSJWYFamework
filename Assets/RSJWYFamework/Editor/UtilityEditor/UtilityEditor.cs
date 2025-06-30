@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using RSJWYFamework.Runtiem;
+using RSJWYFamework.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;

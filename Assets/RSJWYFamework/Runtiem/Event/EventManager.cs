@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Concurrent;
-using RSJWYFamework.Runtiem;
+using RSJWYFamework.Runtime;
 using UnityEngine.Assertions;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 默认事件系统
