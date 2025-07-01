@@ -41,7 +41,7 @@ namespace RSJWYFamework.Runtime
         {
             this.Owner = Owner;
             this.Priority = priority;
-            var _name=string.IsNullOrEmpty(name)?Utiltiy.Timestamp.UnixTimestampMilliseconds.ToString():name;
+            var _name=string.IsNullOrEmpty(name)?Utility.Timestamp.UnixTimestampMilliseconds.ToString():name;
         }
         
         /// <summary>

@@ -5,7 +5,7 @@ using YooAsset;
 
 namespace RSJWYFamework.Runtime
 {
-    public static partial class Utiltiy
+    public static partial class Utility
     {
         public static class YooAsset
         {

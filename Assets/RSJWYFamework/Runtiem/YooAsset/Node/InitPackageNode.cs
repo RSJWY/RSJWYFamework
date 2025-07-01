@@ -37,7 +37,7 @@ namespace RSJWYFamework.Runtime
                 throw new AppException($"运行模式：{playMode} 目前不支持，初始化失败");
             }
             
-            var fileDecryption = new Utiltiy.YooAsset.AppHotPackageFileDecryption();
+            var fileDecryption = new Utility.YooAsset.AppHotPackageFileDecryption();
             
             AppLogger.Log($"初始化包{packageName} 运行模式{playMode} ");
             // 创建资源包裹类
@@ -68,9 +68,9 @@ namespace RSJWYFamework.Runtime
             // 联机运行模式
             if (playMode == EPlayMode.HostPlayMode)
             {
-                string defaultHostServer =  Utiltiy.YooAsset.GetHostServerURL(packageName);
-                string fallbackHostServer =  Utiltiy.YooAsset.GetHostServerURL(packageName);
-                IRemoteServices remoteServices = new Utiltiy.YooAsset.RemoteServices(defaultHostServer, fallbackHostServer);
+                string defaultHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
+                string fallbackHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
+                IRemoteServices remoteServices = new Utility.YooAsset.RemoteServices(defaultHostServer, fallbackHostServer);
                 var createParameters = new HostPlayModeParameters();
                 createParameters.BuildinFileSystemParameters =
                     FileSystemParameters.CreateDefaultBuildinFileSystemParameters(fileDecryption);

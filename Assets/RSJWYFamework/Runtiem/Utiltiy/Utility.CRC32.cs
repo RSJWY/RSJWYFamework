@@ -3,9 +3,9 @@ using System.IO;
 namespace RSJWYFamework.Runtime
 {
     
-    public static  partial class Utiltiy
+    public static partial class Utility
     {
-        public class CRC32
+        public static class CRC32
         {
             private const int CachedBytesLength = 0x1000;
             private static readonly byte[] s_CachedBytes = new byte[CachedBytesLength];

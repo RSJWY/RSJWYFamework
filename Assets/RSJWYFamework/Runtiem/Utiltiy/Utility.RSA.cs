@@ -5,7 +5,7 @@ namespace RSJWYFamework.Runtime
 {
     public static partial class Utility
     {
-        public class RSA
+        public static class RSA
         {
             /// <summary>
             /// 验证证书
@@ -40,5 +40,6 @@ namespace RSJWYFamework.Runtime
                 return result;
             }
         }
+
     }
 }

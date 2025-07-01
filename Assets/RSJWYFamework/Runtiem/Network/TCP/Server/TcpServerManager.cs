@@ -1,69 +1,25 @@
 using System;
 using System.Net;
-using RSJWYFamework.Runtime.Default.EventsLibrary;
-using RSJWYFamework.Runtime.Event;
-using RSJWYFamework.Runtime.Module;
-using RSJWYFamework.Runtime.NetWork.Base;
-using RSJWYFamework.Runtime.Network.Public;
-using RSJWYFamework.Runtime.NetWork.TCP.Server;
 
-namespace RSJWYFamework.Runtime.Default.Manager
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 服务器模块管理器，用于和Unity之间交互
     /// </summary>
-    public class TcpServerManager : ISocketTCPServerController,ILife
+    [Module(100)]
+    public class TcpServerManager :ModuleBase
     {
         private TcpServerService tcpsocket;
-
-        private ISocketMsgBodyEncrypt m_SocketMsgBodyEncrypt; 
         
-        public void Init()
-        {
-            Main.Main.EventModle.BindEventRecord<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            Main.Main.EventModle.BindEventRecord<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
-            Main.Main.AddLife(this);
-            //检查是不是监听全部IP
-            tcpsocket = new();
-            tcpsocket.TcpServerController = this;
-            tcpsocket.m_SocketMsgEncode = new ProtobufSocketMsgEncode();
-            tcpsocket.m_MsgBodyEncrypt = new ProtobufSocketMsgBodyEncrypt();
-        }
-
-        public void Close()
-        {
-            Main.Main.EventModle.UnBindEventRecord<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            Main.Main.EventModle.UnBindEventRecord<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
-            Main.Main.RemoveLife(this);
-            tcpsocket?.Quit();
-        }
 
 
-        public void InitServer(string ip = "any", int port = 6100)
+        public void Bind(string ip , int port)
         {
-            if (ip != "any")
+            if (Utility.SocketTool.MatchIP(ip) && Utility.SocketTool.MatchPort(port))
             {
-                //指定IP
-                //检查IP和Port是否合法
-                if (Utility.Utility.SocketTool.MatchIP(ip) && Utility.Utility.SocketTool.MatchPort(port))
-                {
-                    tcpsocket.Init(ip, port);
-                    return;
-                }
+                tcpsocket=new TcpServerService(ip,port,this);
+                tcpsocket.Bind();
             }
-            else
-            {
-                //监听全部IP
-                //检查Port是否合法
-                if (Utility.Utility.SocketTool.MatchPort(port))
-                {
-                    tcpsocket.Init(IPAddress.Any, port);
-                    return;
-                }
-            }
-
-            //全部错误则使用默认参数
-            tcpsocket.Init(IPAddress.Any, 6000);
         }
 
         /// <summary>
@@ -71,7 +27,7 @@ namespace RSJWYFamework.Runtime.Default.Manager
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="eventArgsBase"></param>
-        public void SendMsgToClientEvent(object sender, RecordEventArgsBase eventArgsBase)
+        public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
         {
             if (eventArgsBase is ServerToClientMsgEventArgs args)
                 SendMsgToClient(args.msgBase,args.ClientSocketToken);
@@ -81,25 +37,37 @@ namespace RSJWYFamework.Runtime.Default.Manager
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="eventArgsBase"></param>
-        public void SendMsgToClientAllEvent(object sender, RecordEventArgsBase eventArgsBase)
+        public void SendMsgToClientAllEvent(object sender, EventArgsBase eventArgsBase)
         {
             if (eventArgsBase is not ServerToClientMsgAllEventArgs args) return;
             SendMsgToClientAll(args.msgBase);
         }
-
-        public void SendMsgToClientAll(object msgBase)
+        /// <summary>
+        /// 向所有连接上来设备广播消息
+        /// </summary>
+        /// <param name="msgBase"></param>
+        public void SendMsgToClientAll(byte[] msgBase)
         {
             foreach (var token in tcpsocket.ClientDic)
             {
-                tcpsocket.SendMessage(msgBase as MsgBase, token.Value);
+                tcpsocket.SendMessage(msgBase, token.Value);
             }
         }
-        public void SendMsgToClient(object msgBase,ClientSocketToken clientSocketToken)
+        /// <summary>
+        /// 向指定客户端发送消息
+        /// </summary>
+        /// <param name="msgBase"></param>
+        /// <param name="clientSocketToken"></param>
+        public void SendMsgToClient(byte[]  msgBase,ClientSocketToken clientSocketToken)
         {
-            tcpsocket?.SendMessage(msgBase as MsgBase,clientSocketToken);
+            tcpsocket?.SendMessage(msgBase,clientSocketToken);
         }
 
 
+        /// <summary>
+        /// 客户端链接上来
+        /// </summary>
+        /// <param name="clientSocketToken"></param>
         public void ClientConnectedCallBack(ClientSocketToken clientSocketToken)
         {
             var _event = new ServerClientConnectedCallBackEventArgs
@@ -108,9 +76,13 @@ namespace RSJWYFamework.Runtime.Default.Manager
                 ClientSocketToken = clientSocketToken,
                 msgBase = null
             };
-            Main.Main.EventModle.Fire(_event);
+            ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
+        /// <summary>
+        /// 客户端离线
+        /// </summary>
+        /// <param name="clientSocketToken"></param>
         public void CloseClientReCallBack(ClientSocketToken clientSocketToken)
         {
             var _event = new ServerCloseClientCallBackEventArgs
@@ -119,9 +91,13 @@ namespace RSJWYFamework.Runtime.Default.Manager
                 ClientSocketToken = clientSocketToken,
                 msgBase = null
             };
-            Main.Main.EventModle.Fire(_event);
+            ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
+        /// <summary>
+        /// 服务端状态更新
+        /// </summary>
+        /// <param name="netServerStatus"></param>
         public void ServerServiceStatus(NetServerStatus netServerStatus)
         {
             var _event = new ServerStatusEventArgs
@@ -129,40 +105,37 @@ namespace RSJWYFamework.Runtime.Default.Manager
                 Sender = this,
                 status = netServerStatus
             };
-            Main.Main.EventModle.Fire( _event);
+            ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
-        public void FromClientReceiveMsgCallBack(ClientSocketToken clientSocketToken, object msgBase)
+        public void FromClientReceiveMsgCallBack(ClientSocketToken clientSocketToken, byte[] msgBase)
         {
             var _event= new FromClientReceiveMsgCallBackEventArgs
             {
                 Sender = this,
                 ClientSocketToken = clientSocketToken,
-                msgBase = msgBase as MsgBase
+                msgBase = msgBase
             };
-            Main.Main.EventModle.Fire(_event);
+            ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
-        public void Update(float time, float deltaTime)
+
+
+        public override void Initialize()
         {
-            
+            ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
+            ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
         }
 
-        public void UpdatePerSecond(float time)
+        public override void Shutdown()
         {
+            ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
+            ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
+            tcpsocket?.Quit();
         }
 
-        public void FixedUpdate()
+        public override void ModuleUpdate()
         {
-        }
-
-        public void LateUpdate()
-        {
-        }
-
-        public uint Priority()
-        {
-            return 50;
         }
     }
 }

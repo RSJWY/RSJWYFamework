@@ -126,8 +126,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
                 buildParameters.BuiltinShadersBundleName = builtinShaderBundleName;
-                buildParameters.EncryptionServices = new Utiltiy.YooAsset.EncryptPF();
-                buildParameters.ManifestServices = new Utiltiy.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
+                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
 
                 var pipeline = new ScriptableBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
@@ -152,8 +152,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.CompressOption = CompressOption ;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
-                buildParameters.EncryptionServices = new Utiltiy.YooAsset.EncryptPF();
-                buildParameters.ManifestServices = new Utiltiy.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
+                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
                 
                 var pipeline = new BuiltinBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
@@ -176,8 +176,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.BuildinFileCopyParams =BuildinFileCopyParams;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
-                buildParameters.EncryptionServices = new Utiltiy.YooAsset.EncryptRF();
-                buildParameters.ManifestServices = new Utiltiy.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptRF();
+                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
                 
                 var pipeline = new RawFileBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);

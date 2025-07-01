@@ -9,7 +9,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// ModBusCRC16校验值计算
         /// </summary>
-        public class ModbusCRC16
+        public static class ModbusCRC16
         {
             /// <summary>
             /// 计算字符串的CRC16校验值并整合为一组

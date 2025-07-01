@@ -5,7 +5,6 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public abstract class EventArgsBase
     {
-        public abstract void Release();
         /// <summary>
         /// 消息发送者
         /// </summary>

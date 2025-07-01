@@ -16,7 +16,7 @@ MonoBehaviour:
   APPName: "\u6D4B\u8BD5\u8F6F\u4EF6"
   Version: TestV0.1
   Loglevel: 4
-  AESKey: 
+  AESKey: AA
   YooAssetPackageData:
   - PackageName: PrefabPackage
     PackageTips: 

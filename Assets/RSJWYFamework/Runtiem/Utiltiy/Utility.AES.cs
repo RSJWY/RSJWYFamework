@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RSJWYFamework.Runtime
 {
-    public static  partial class Utiltiy
+    public static  partial class Utility
     {
 
         /// <summary>
