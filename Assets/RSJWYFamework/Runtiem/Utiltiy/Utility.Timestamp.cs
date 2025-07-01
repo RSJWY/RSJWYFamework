@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
-    public static  partial class Utiltiy
+    public static  partial class Utility
     {
-        public class Timestamp
+        public static class Timestamp
         {
             private static Stopwatch _stopwatch;
 

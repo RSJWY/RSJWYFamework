@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace RSJWYFamework.Runtime
 {
-    public static  partial class Utiltiy
+    public static  partial class Utility
     {
         /// <summary>
         /// 16进制的字符串转为字节数组
