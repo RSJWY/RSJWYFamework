@@ -15,28 +15,18 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// UDP服务字典
         /// </summary>
-        private Dictionary<string, UDPService> UDPServiceDict = new();
+        private UDPService udpService;
 
 
         /// <summary>
         /// 创建一个UDP服务
         /// </summary>
         /// <returns></returns>
-        public CreateUDPService CreateUDPService(string ip, int port,string token="")
+        public bool CreateUDPService(string ip, int port)
         {
-            if (UDPServiceDict.ContainsKey(token))
-            {
-                AppLogger.Error($"已经存在Token：{token}，创建终止");
-                return new CreateUDPService
-                {
-                    isSuccess = false,
-                    Token = string.Empty
-                };
-            }
             if (Utility.SocketTool.MatchIP(ip) && Utility.SocketTool.MatchPort(port))
             {
-                var udpService = new UDPService(ip, port);
-                udpService.UDPServiceToken = token;
+                udpService = new UDPService(ip, port);
                 udpService.ReceiveMsgCallBack += ((_udpReciveMsg) =>
                 {
                     ModuleManager.GetModule<EventManager>().Fire(new UDPReciveMsgEventArgs
@@ -53,63 +43,23 @@ namespace RSJWYFamework.Runtime
                         UDPSendCallBack = _udpSendCallBack
                     });
                 });
-                var isSuccess = udpService.Bind();
-                if (isSuccess)
-                {
-                    if (string.IsNullOrEmpty(token))
-                    {
-                        token = Utility.Timestamp.UnixTimestampMilliseconds.ToString();
-                    }
-                    UDPServiceDict.Add(token, udpService);
-                    return new CreateUDPService
-                    {
-                        isSuccess = true,
-                        Token = token
-                    };
-                }
-                else
-                {
-                    return new CreateUDPService
-                    {
-                        isSuccess = true,
-                        Token = string.Empty
-                    };
-                }
+                return udpService.Bind();
             }
             else
             {
                 AppLogger.Error($"监听信息不合法！！{ip}:{port}");
-                return new CreateUDPService
-                {
-                    isSuccess = false,
-                    Token = string.Empty
-                };
+                return false;
             }
         }
         
-        public void CloseUDPService(string token = "")
+        public void CloseUDPService()
         {
-            if (string.IsNullOrEmpty(token))
-            {
-                AppLogger.Warning($"传入非法Token");
-                return;
-            }
-            UDPServiceDict[token].Close();
-            UDPServiceDict.Remove(token);
+            udpService?.Close();
         }
 
         public bool SendUdpMessage(UDPSendMsg udpSendMsg)
         {
-            if (UDPServiceDict.ContainsKey(udpSendMsg.UDPServiceToken))
-            {
-                return UDPServiceDict[udpSendMsg.UDPServiceToken].SendUdpMessage(udpSendMsg);
-            }
-            else
-            {
-                AppLogger.Warning($"UDPSevice服务类：{udpSendMsg.UDPServiceToken}不存在！数据丢弃");
-                return false;
-            }
-            
+            return udpService.SendUdpMessage(udpSendMsg);
         }
         private void Callback(object sender, EventArgsBase eventArgsBase)
         {
@@ -120,13 +70,11 @@ namespace RSJWYFamework.Runtime
         }
         public override void Initialize()
         {
-            UDPServiceDict.Clear();
             ModuleManager.GetModule<EventManager>().BindEvent<UDPSendMsgEventArgs>(Callback);
         }
         
         public override void Shutdown()
         {
-            UDPServiceDict.Clear();
             ModuleManager.GetModule<EventManager>().UnBindEvent<UDPSendMsgEventArgs>(Callback);
         }
 
@@ -134,16 +82,5 @@ namespace RSJWYFamework.Runtime
         {
         }
     }
-
-    public struct CreateUDPService
-    {
-        /// <summary>
-        /// 是否创建成功
-        /// </summary>
-        public bool isSuccess;
-        /// <summary>
-        /// 创建成功后的ID
-        /// </summary>
-        public string Token;
-    }
+    
 }

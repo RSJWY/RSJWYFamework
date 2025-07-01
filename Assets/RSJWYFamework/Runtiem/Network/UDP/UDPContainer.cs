@@ -8,10 +8,6 @@ namespace RSJWYFamework.Runtime
     public struct UDPSendMsg
     {
         /// <summary>
-        /// 使用UDPManager内存储的哪个UDPService发送数据
-        /// </summary>
-        public string UDPServiceToken;
-        /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
         /// </summary>
         public string MsgToken;
@@ -31,10 +27,6 @@ namespace RSJWYFamework.Runtime
     public struct UDPSendCallBack
     {
         /// <summary>
-        /// 使用UDPManager内存储的哪个UDPService发送数据
-        /// </summary>
-        public string UDPServiceToken;
-        /// <summary>
         /// 消息Token
         /// </summary>
         public string MsgToken{ get; internal set; }
@@ -52,11 +44,6 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public struct UDPReciveMsg
     {
-        /// <summary>
-        /// 使用UDPManager内存储的哪个UDPService接收的数据
-        /// </summary>
-        public string UDPServiceToken;
-        
         /// <summary>
         /// 接收是否成功
         /// </summary>

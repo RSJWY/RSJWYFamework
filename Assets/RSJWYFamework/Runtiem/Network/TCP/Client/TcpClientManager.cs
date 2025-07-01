@@ -1,15 +1,12 @@
 using System;
 using Cysharp.Threading.Tasks;
-using RSJWYFamework.Runtime.Network.Public;
-using RSJWYFamework.Runtime.NetWork.TCP.Client;
-using RSJWYFamework.Runtime.Socket.Base;
 
 namespace RSJWYFamework.Runtime.Default.Manager
 {
     /// <summary>
     /// 客户端的控制器
     /// </summary>
-    public class TcpClientTask : ISocketTCPClientController,ILife
+    public class TcpClientManager : ISocketTCPClientController
     {
         private TcpClientService tcpsocket;
         private bool reLock = false;

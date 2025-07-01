@@ -12,10 +12,6 @@ namespace RSJWYFamework.Runtime
     internal class UDPService
     {
         /// <summary>
-        /// 在UDPManager内的Token标记绑定
-        /// </summary>
-        public string UDPServiceToken;
-        /// <summary>
         /// 监听端口
         /// </summary>
         private int _port;
@@ -169,7 +165,6 @@ namespace RSJWYFamework.Runtime
                     Buffer.BlockCopy(e.Buffer, 0, data, 0, e.BytesTransferred);
                     var msg = new UDPReciveMsg
                     {
-                        UDPServiceToken = UDPServiceToken,
                         Success = true,
                         Bytes = data,
                         remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
@@ -182,7 +177,6 @@ namespace RSJWYFamework.Runtime
                     AppLogger.Error($"UDP 接收时发生非成功时错误！: {e.SocketError}");
                     var msg = new UDPReciveMsg
                     {
-                        UDPServiceToken = UDPServiceToken,
                         Success=false,
                         remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
                         Error=e.SocketError.ToString()
@@ -195,7 +189,6 @@ namespace RSJWYFamework.Runtime
                 AppLogger.Error($"UDP 接收时发生异常错误: {exception}");
                 var msg = new UDPReciveMsg
                 {
-                    UDPServiceToken = UDPServiceToken,
                     Success=false,
                     remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
                     Error=exception.ToString()
@@ -243,14 +236,12 @@ namespace RSJWYFamework.Runtime
                         AppLogger.Error( $"一个本不该发生的错误，ProcessSend UDP消息发送错误！！！已发送长度和消息本体长度不同");
                         SendCallBack?.Invoke(new UDPSendCallBack()
                         {
-                            UDPServiceToken = UDPServiceToken,
                             Success=false,
                             Error="一个本不该发生的错误，ProcessSend UDP消息发送错误！！！已发送长度和消息本体长度不同",
                         });
                     }
                     SendCallBack?.Invoke(new UDPSendCallBack()
                     {
-                        UDPServiceToken = UDPServiceToken,
                         Success=true,
                         Error=string.Empty,
                     });
