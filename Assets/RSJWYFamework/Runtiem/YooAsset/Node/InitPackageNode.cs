@@ -37,7 +37,7 @@ namespace RSJWYFamework.Runtime
                 throw new AppException($"运行模式：{playMode} 目前不支持，初始化失败");
             }
             
-            var fileDecryption = new Utiltiy.YooAsset.FileDecryption();
+            var fileDecryption = new Utiltiy.YooAsset.AppHotPackageFileDecryption();
             
             AppLogger.Log($"初始化包{packageName} 运行模式{playMode} ");
             // 创建资源包裹类

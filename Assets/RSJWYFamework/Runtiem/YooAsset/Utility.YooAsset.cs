@@ -36,8 +36,6 @@ namespace RSJWYFamework.Runtime
                     return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/Android/{packageName}";
                 else if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.iOS)
                     return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/IPhone/{packageName}";
-                else if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.WebGL)
-                    return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/WebGL/{packageName}";
                 else
                     return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/PC/{packageName}";
 #else
@@ -45,8 +43,6 @@ namespace RSJWYFamework.Runtime
             return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/Android/{packageName}";
         else if (Application.platform == RuntimePlatform.IPhonePlayer)
             return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/IPhone/{packageName}";
-        else if (Application.platform == RuntimePlatform.WebGLPlayer)
-            return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/WebGL/{packageName}";
         else
             return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/PC/{packageName}";
 #endif
@@ -80,7 +76,7 @@ namespace RSJWYFamework.Runtime
             /// <summary>
             /// 资源文件流加载解密类
             /// </summary>
-            public class FileDecryption : IDecryptionServices
+            public class AppHotPackageFileDecryption : IDecryptionServices
             {
 
                 //TODO:需要对这里加解密深度优化一下
@@ -129,7 +125,23 @@ namespace RSJWYFamework.Runtime
                     return Encoding.UTF8.GetString(DData);
                 }
             }
-#if UNITY_EDITOR
+            /// <summary>
+            /// 资源清单数据处理
+            /// </summary>
+            public class AppHotPackgaeManifestServices:IManifestServices
+            {
+                public byte[] ProcessManifest(byte[] fileData)
+                {
+                    return fileData;
+                }
+
+                public byte[] RestoreManifest(byte[] fileData)
+                {
+                    return fileData;
+                }
+            }
+            
+            #if UNITY_EDITOR
             /// <summary>
             /// 加密资源包-原生资源
             /// </summary>
@@ -194,7 +206,7 @@ namespace RSJWYFamework.Runtime
                     };
                 }
             }
-#endif
+            #endif
         }
     }
 }
