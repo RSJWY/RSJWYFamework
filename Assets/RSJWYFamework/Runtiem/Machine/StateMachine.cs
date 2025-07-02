@@ -4,7 +4,7 @@ namespace RSJWYFamework.Runtime
 {
     public class StateMachine
     {
-         public string Name;
+         public string st_Name;
          /// <summary>
          /// 状态机持有者
          /// </summary>
@@ -41,7 +41,7 @@ namespace RSJWYFamework.Runtime
         {
             this.Owner = Owner;
             this.Priority = priority;
-            var _name=string.IsNullOrEmpty(name)?Utility.Timestamp.UnixTimestampMilliseconds.ToString():name;
+            st_Name=string.IsNullOrEmpty(name)?Utility.Timestamp.UnixTimestampMilliseconds.ToString():name;
         }
         
         /// <summary>

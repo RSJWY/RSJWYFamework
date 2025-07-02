@@ -22,9 +22,9 @@ namespace RSJWYFamework.Runtime
         private readonly StateMachine _smc;
         private RSteps _steps = RSteps.None;
         
-        public LoadHotCodeAsyncOperation()
+        public LoadHotCodeAsyncOperation(object owner)
         {
-            _smc = new StateMachine(this,"加载热更代码");
+            _smc = new StateMachine(owner,"加载热更代码");
             //创建流程
             _smc.AddNode(new LoadDLLByteNode());
             _smc.AddNode(new LoadHotCodeNode());

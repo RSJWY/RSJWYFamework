@@ -15,9 +15,9 @@ namespace RSJWYFamework.Runtime
         private RSteps _steps = RSteps.None;
         
         
-        public LoadPackagesAsyncOperation(string packageName, EPlayMode playMode)
+        public LoadPackagesAsyncOperation(object owner,string packageName, EPlayMode playMode)
         {
-            _smc = new StateMachine(this,"初始化资源管理");
+            _smc = new StateMachine(owner,"初始化资源管理");
             // 创建状态机
             //2.2.1版本 offlinePlayMode EditorSimulateMode 需要依次调用init, request version, update manifest 三部曲
             _smc.AddNode(new InitPackageNode());

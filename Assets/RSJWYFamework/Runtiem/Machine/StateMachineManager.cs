@@ -13,31 +13,30 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 添加一个流程控制器
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="procedureController"></param>
-        public void AddProcedure(string name,StateMachine procedureController,bool isAutoRun=false) 
+        public void AddStateMachine(StateMachine stateMachine,bool isAutoRun=false) 
         {
-            if (Procedures.ContainsKey(name))
+            
+            if (Procedures.ContainsKey(stateMachine.st_Name))
             {
-                AppLogger.Error($"添加流程失败：流程 {name} 已存在！");
+                AppLogger.Error($"添加流程失败：流程 {stateMachine.st_Name} 已存在！");
             }
             else
             {
-                Procedures.Add(name,procedureController);
+                Procedures.Add(stateMachine.st_Name,stateMachine);
                 if (isAutoRun)
                 {
-                    procedureController.StartNode();
+                    stateMachine.StartNode();
                 }
             }
         }
         /// <summary>
         /// 移除一个流程控制器
         /// </summary>
-        public void RemoveProcedure(string name) 
+        public void RemoveStateMachine(string st_Name) 
         {
-            if (Procedures.ContainsKey(name))
+            if (Procedures.ContainsKey(st_Name))
             {
-                Procedures.Remove(name);
+                Procedures.Remove(st_Name);
             }
         }
         /// <summary>
@@ -45,11 +44,11 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="name">流程控制器绑定的名字</param>
         /// <returns></returns>
-        public StateMachine GetProcedure(string name)
+        public StateMachine GetStateMachine(string st_Name)
         {
-            if (Procedures.ContainsKey(name))
+            if (Procedures.ContainsKey(st_Name))
             {
-                return Procedures[name];
+                return Procedures[st_Name];
             }
             return null;
         }
