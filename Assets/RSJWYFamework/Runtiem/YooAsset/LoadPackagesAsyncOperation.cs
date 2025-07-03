@@ -5,14 +5,14 @@ namespace RSJWYFamework.Runtime
 {
     public class LoadPackagesAsyncOperation:AppGameAsyncOperation
     { 
-        enum RSteps
+        enum LoadPackageSteps
         {
             None,
             Update,
             Done
         }
         private readonly StateMachine _smc;
-        private RSteps _steps = RSteps.None;
+        private LoadPackageSteps _steps = LoadPackageSteps.None;
         
         
         public LoadPackagesAsyncOperation(object owner,string packageName, EPlayMode playMode)
@@ -37,7 +37,7 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnStart()
         {
-            _steps = RSteps.Update;
+            _steps = LoadPackageSteps.Update;
             _smc.StartNode<InitPackageNode>();
         }
 
@@ -45,16 +45,16 @@ namespace RSJWYFamework.Runtime
         {
             switch (_steps)
             {
-                case RSteps.None:
-                case RSteps.Done:
+                case LoadPackageSteps.None:
+                case LoadPackageSteps.Done:
                     return;
-                case RSteps.Update:
+                case LoadPackageSteps.Update:
                 {
                     _smc.OnUpdate();
                     if(_smc.GetNowNode() == typeof(UpdaterDoneNode))
                     {
                         Status = AppAsyncOperationStatus.Succeed;
-                        _steps = RSteps.Done;
+                        _steps = LoadPackageSteps.Done;
                     }
 
                     break;

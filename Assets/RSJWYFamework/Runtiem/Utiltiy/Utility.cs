@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
@@ -115,6 +116,16 @@ namespace RSJWYFamework.Runtime
                 int k = rng.Next(n + 1);
                 (list[k], list[n]) = (list[n], list[k]);
             }
+        }
+        /// <summary>
+        /// 获取进度
+        /// </summary>
+        /// <param name="total">总大小</param>
+        /// <param name="current">当前大小</param>
+        /// <returns></returns>
+        public static float GetProgress(long total, long current)
+        {
+            return Mathf.Clamp01((float)current / total);
         }
     }
 }

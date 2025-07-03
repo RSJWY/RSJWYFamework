@@ -52,6 +52,7 @@ namespace RSJWYFamework.Runtime
 
         /// <summary>
         /// 终止异步操作
+        /// <remarks>继承的子类调用取消请求</remarks>
         /// </summary>
         protected void Abort()
         {

@@ -9,7 +9,7 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public class LoadHotCodeAsyncOperation:AppGameAsyncOperation
     {
-        enum RSteps
+        enum LoadHotCodeSteps
         {
             None,
             Update,
@@ -20,7 +20,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public Dictionary<string, Assembly> HotCode { get; private set; } = new();
         private readonly StateMachine _smc;
-        private RSteps _steps = RSteps.None;
+        private LoadHotCodeSteps _steps = LoadHotCodeSteps.None;
         
         public LoadHotCodeAsyncOperation(object owner)
         {
@@ -34,22 +34,22 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnStart()
         {
-            _steps = RSteps.Update;
+            _steps = LoadHotCodeSteps.Update;
             _smc.StartNode<LoadDLLByteNode>();
         }
 
         protected override void OnUpdate()
         {
-            if (_steps == RSteps.None || _steps == RSteps.Done)
+            if (_steps == LoadHotCodeSteps.None || _steps == LoadHotCodeSteps.Done)
                 return;
 
-            if(_steps == RSteps.Update)
+            if(_steps == LoadHotCodeSteps.Update)
             {
                 _smc.OnUpdate();
                 if(_smc.GetNowNode() == typeof(LoadHotCodeDoneNode))
                 {
                     Status = AppAsyncOperationStatus.Succeed;
-                    _steps = RSteps.Done;
+                    _steps = LoadHotCodeSteps.Done;
                 }
             }
         }

@@ -29,7 +29,7 @@ namespace RSJWYFamework.Runtime
         internal bool IsWaitForAsyncComplete { private set; get; } = false;
 
         /// <summary>
-        /// 是否已经完成
+        /// 是否已经执行结束
         /// </summary>
         internal bool IsFinish { private set; get; } = false;
 
@@ -326,6 +326,11 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public UniTask UniTask(CancellationToken cancellationToken = default)
         {
+            //TODO 避免忘记将本异步放入异步系统中执行生命周期，本段代码是否合理，仍需研究
+            if (Status == AppAsyncOperationStatus.None)
+            {
+                StartOperation();
+            }
             if (_utcs == null)
             {
                 _utcs = new UniTaskCompletionSource();

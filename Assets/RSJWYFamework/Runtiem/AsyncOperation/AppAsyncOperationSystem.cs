@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace RSJWYFamework.Runtime
 {
+    /// <summary>
+    /// 异步生命周期执行器
+    /// </summary>
     [Module]
     public class AppAsyncOperationSystem:ModuleBase
     {
