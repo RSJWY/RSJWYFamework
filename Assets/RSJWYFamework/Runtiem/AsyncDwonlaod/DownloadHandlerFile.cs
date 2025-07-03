@@ -13,18 +13,13 @@ namespace RSJWYFamework.Runtime
         /// 文件流
         /// </summary>
         private FileStream fileStream;
-        /// <summary>
-        /// 存储文件是否基于追加形式
-        /// </summary>
-        private bool append;
         
-        DownloadTask downloadTask;
+        DownloadFileAsyncOperation _downloadFileAsyncOperation;
 
-        public DownloadHandlerFile(string path, bool append,DownloadTask task) : base()
+        public DownloadHandlerFile(string path, DownloadFileAsyncOperation fileAsyncOperation) : base()
         {
             this.filePath = path;
-            this.append = append;
-            downloadTask=task;
+            _downloadFileAsyncOperation=fileAsyncOperation;
         
             // 确保目录存在
             string directory = Path.GetDirectoryName(path);
@@ -36,15 +31,16 @@ namespace RSJWYFamework.Runtime
             // 打开文件流
             fileStream = new FileStream(
                 path, 
-                append ? FileMode.Append : FileMode.Create, 
+                FileMode.Create, 
                 FileAccess.Write, 
                 FileShare.Read
             );
         }
 
-        public void Pause()
+        public void Close()
         {
             fileStream.Close();
+            fileStream.Dispose();
         }
 
         /// <summary>
@@ -56,7 +52,7 @@ namespace RSJWYFamework.Runtime
                 return false;//终止下载器
 
             fileStream.Write(data, 0, dataLength);
-            downloadTask.downloadedBytes += dataLength;
+            _downloadFileAsyncOperation.downloadedBytes += dataLength;
             return true;//继续下载
         }
 
@@ -65,8 +61,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         protected override void CompleteContent()
         {
-            fileStream.Close();
-            fileStream.Dispose();
+            Close();
         }
     }
 }
