@@ -110,9 +110,9 @@ namespace RSJWYFamework.Runtime
                 if (timer >= 1f)
                 {
                     module.ModulePerSecondUpdate();
+                    timer -= 1f; // 减去1秒，保留余数
                 }
             }
-            timer -= 1f; // 减去1秒，保留余数
         }
 
         private void FixedUpdate()
