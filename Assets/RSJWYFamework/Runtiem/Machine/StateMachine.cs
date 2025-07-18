@@ -71,9 +71,6 @@ namespace RSJWYFamework.Runtime
         /// <param name="value"></param>
         public void SetBlackboardValue(string key, object value)
         {
-            if (blackboard.ContainsKey(key))
-                blackboard.Add(key, value);
-            else
                 blackboard[key] = value;
         }
         /// <summary>
@@ -83,14 +80,48 @@ namespace RSJWYFamework.Runtime
         /// <returns></returns>
         public object GetBlackboardValue(string key)
         {
-            if (blackboard.TryGetValue(key, out Object value))
+            // 参数有效性检查
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("键不能为空或空字符串", nameof(key));
+            }
+
+            // 尝试获取值
+            if (blackboard.TryGetValue(key, out object value))
             {
                 return value;
             }
             else
             {
                 AppLogger.Warning($"未能从黑板中获取数据：{key}");
-                return null;
+                return null; // 找不到时返回 null
+            }
+        }
+
+        /// <summary>
+        /// 获取黑板数据
+        /// </summary>
+        /// <param name="key"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetBlackboardValue<T>(string key)
+        {
+            // 参数有效性检查
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("键不能为空或空字符串", nameof(key));
+            }
+
+            // 获取值并进行类型转换
+            var value = GetBlackboardValue(key);
+            if (value is T typedValue)
+            {
+                return typedValue;
+            }
+            else
+            {
+                // 如果未找到或类型不匹配，返回默认值
+                return default;
             }
         }
         /// <summary>
