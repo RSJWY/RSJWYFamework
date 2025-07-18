@@ -645,7 +645,7 @@ namespace RSJWYFamework.Runtime
             dataDic.Clear();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
         }
     }

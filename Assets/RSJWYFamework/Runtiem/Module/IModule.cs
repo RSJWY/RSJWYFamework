@@ -1,6 +1,10 @@
 ﻿namespace RSJWYFamework.Runtime
 {
-    public interface IModule
+    /// <summary>
+    /// 模块接口
+    /// <remarks>继承了ILife接口，大部分情况下模块都需要生命周期</remarks>
+    /// </summary>
+    public interface IModule:ILife
     {
         /// <summary>
         /// 模块初始化
@@ -10,16 +14,6 @@
         /// 模块卸载
         /// </summary>
         void Shutdown();
-        /// <summary>
-        /// 模块帧更新
-        /// </summary>
-        void ModuleUpdate();
-        /// <summary>
-        /// 模块秒更新
-        /// </summary>
-        void ModulePerSecondUpdate();
-        void ModuleFixedUpdate();
-        void ModuleLateUpdate();
     }
 
 }

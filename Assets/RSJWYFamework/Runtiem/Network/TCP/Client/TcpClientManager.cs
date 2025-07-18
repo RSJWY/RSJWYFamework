@@ -68,12 +68,12 @@ namespace RSJWYFamework.Runtime
             tcpsocket?.Quit();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
             tcpsocket?.TCPUpdate();
         }
 
-        public override void ModulePerSecondUpdate()
+        public override void LifePerSecondUpdate()
         {
             if (tcpsocket.Status==NetClientStatus.Close||tcpsocket?.Status==NetClientStatus.Fail&&reLock==false)
             {

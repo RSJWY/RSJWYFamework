@@ -96,7 +96,7 @@ namespace RSJWYFamework.Runtime
             _callQueue.Clear();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
             if (_callQueue.IsEmpty)
                 return;

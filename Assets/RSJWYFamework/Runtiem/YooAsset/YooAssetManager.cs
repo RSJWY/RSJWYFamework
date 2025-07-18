@@ -41,7 +41,7 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
         }
     }

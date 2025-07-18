@@ -53,7 +53,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 更新异步操作系统
         /// </summary>
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
             // 移除已经完成的异步操作
             // 注意：移除上一帧完成的异步操作

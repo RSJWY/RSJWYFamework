@@ -62,7 +62,7 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void ModulePerSecondUpdate()
+        public override void LifePerSecondUpdate()
         {
             foreach (var procedure in Procedures)
             {
@@ -70,7 +70,7 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
             foreach (var procedure in Procedures)
             {

@@ -96,7 +96,7 @@ namespace RSJWYFamework.Runtime
             CloseUDPService();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
         }
     }

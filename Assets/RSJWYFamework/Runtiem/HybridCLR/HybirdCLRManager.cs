@@ -33,7 +33,7 @@ namespace RSJWYFamework.Runtime
             HotCode.Clear();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
         }
     }

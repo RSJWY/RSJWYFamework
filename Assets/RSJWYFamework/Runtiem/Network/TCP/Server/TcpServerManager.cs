@@ -134,7 +134,7 @@ namespace RSJWYFamework.Runtime
             tcpsocket?.Quit();
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
         }
     }

@@ -2,14 +2,27 @@ using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
-    public abstract class ModuleBase :MonoBehaviour, IModule
+    /// <summary>
+    /// 需要挂到场景的模块基类
+    /// </summary>
+    public abstract class ModuleBase : MonoBehaviour, IModule
     {
         public abstract void Initialize();
-        public abstract void ModuleUpdate();
-        public virtual void ModulePerSecondUpdate(){}
-        public virtual void ModuleFixedUpdate(){}
-        public virtual void ModuleLateUpdate(){}
         public abstract void Shutdown();
+        public int Priority => 99;
+        public abstract void LifeUpdate();
+
+        public virtual void LifePerSecondUpdate()
+        {
+        }
+
+        public virtual void LifeFixedUpdate()
+        {
+        }
+
+        public virtual void LifeLateUpdate()
+        {
+        }
     }
 
 }

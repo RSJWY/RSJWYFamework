@@ -38,7 +38,7 @@ namespace RSJWYFamework.Runtiem
         {
         }
 
-        public override void ModuleUpdate()
+        public override void LifeUpdate()
         {
             // 执行所有排队操作
             while (_executionQueue.TryDequeue(out var action))
