@@ -6,7 +6,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 服务器模块管理器，用于和Unity之间交互
     /// </summary>
-    [Module(100)]
+    [Module()]
     public class TcpServerManager :ModuleBase
     {
         private TcpServerService tcpsocket;

@@ -4,7 +4,7 @@ using YooAsset;
 
 namespace RSJWYFamework.Runtime
 {
-    [Module(10)]
+    [Module()]
     public class YooAssetManager:ModuleBase
     {
         /// <summary>

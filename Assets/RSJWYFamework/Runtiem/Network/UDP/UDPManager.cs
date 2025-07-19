@@ -9,7 +9,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// UDP控制器
     /// </summary>
-    [Module(100)]
+    [Module]
     public class UDPManager:ModuleBase
     {
         /// <summary>

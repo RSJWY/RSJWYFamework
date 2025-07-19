@@ -6,7 +6,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 热更管理器
     /// </summary>
-    [Module(10)]
+    [Module()]
     public class HybirdCLRManager:ModuleBase
     {
         /// <summary>

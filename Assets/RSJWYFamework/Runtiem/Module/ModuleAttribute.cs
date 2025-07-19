@@ -9,7 +9,7 @@ namespace RSJWYFamework.Runtime
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public class ModuleAttribute : Attribute
     {
-        public ModuleAttribute(int priority = 0)
+        public ModuleAttribute()
         {
             
         }
