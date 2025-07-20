@@ -13,37 +13,73 @@ namespace RSJWYFamework.Runtime
     public class UDPManager:ModuleBase
     {
         /// <summary>
-        /// UDP服务字典
+        /// UDP字典
         /// </summary>
-        private UDPService udpService;
-
+        private readonly ConcurrentDictionary<Guid, UDPService> udpServiceDic = new();
 
         /// <summary>
         /// 创建一个UDP服务
         /// </summary>
         /// <returns></returns>
-        public bool Bind(string ip, int port)
+        public Guid Bind(string ip, int port) 
         {
-            if (Utility.SocketTool.MatchIP(ip) && Utility.SocketTool.MatchPort(port))
+            try 
             {
-                udpService = new UDPService(ip, port,this);
-                return udpService.Bind();
+                if (!Utility.SocketTool.MatchIP(ip) || !Utility.SocketTool.MatchPort(port))
+                {
+                    AppLogger.Error($"无效的地址: {ip}:{port}");
+                    return Guid.Empty;
+                }
+
+                var handle = Guid.NewGuid();
+                var service = new UDPService(ip, port, this, handle);
+
+                if (!service.Bind()) 
+                {
+                    service.Close();
+                    return Guid.Empty;
+                }
+
+                if (!udpServiceDic.TryAdd(handle, service)) 
+                {
+                    service.Close();
+                    AppLogger.Error($"Handle冲突: {handle}");
+                    return Guid.Empty;
+                }
+
+                return handle;
             }
-            else
+            catch (Exception ex) 
             {
-                AppLogger.Error($"监听信息不合法！！{ip}:{port}");
-                return false;
+                AppLogger.Error($"Bind失败: {ex.Message}");
+                return Guid.Empty;
             }
         }
         /// <summary>
-        /// 关闭
+        /// 关闭指定UDP服务
         /// </summary>
-        public void CloseUDPService()
+        public void CloseUDPService(Guid handle)
         {
-            udpService?.Close();
+            if (udpServiceDic.TryRemove(handle, out var service))
+            {
+                service.Close();
+            }
         }
+
         /// <summary>
-        /// 接收数据进行广播
+        /// 关闭所有UDP服务
+        /// </summary>
+        public void CloseAllUDPServices()
+        {
+            foreach (var service in udpServiceDic.Values)
+            {
+                service.Close();
+            }
+            udpServiceDic.Clear();
+        }
+
+        /// <summary>
+        /// UDP接收数据进行广播
         /// </summary>
         /// <param name="udpReciveMsg"></param>
         internal void ReciveMsgCallBack(UDPReciveMsg udpReciveMsg)
@@ -67,16 +103,30 @@ namespace RSJWYFamework.Runtime
                 UDPSendCallBack = udpSendCallBack
             });
         }
-        
+
+        /// <summary>
+        /// 是否存在指定的UDP服务
+        /// </summary>
+        public bool IsUDPServiceExist(Guid handle)
+        {
+            return udpServiceDic.ContainsKey(handle);
+        }
         
         /// <summary>
         /// 发送数据
         /// </summary>
         /// <param name="udpSendMsg"></param>
         /// <returns></returns>
-        public bool SendUdpMessage(UDPSendMsg udpSendMsg)
+        public void SendUdpMessage(UDPSendMsg udpSendMsg)
         {
-            return udpService.SendUdpMessage(udpSendMsg);
+            if (udpServiceDic.TryGetValue(udpSendMsg.UDPServerHandle, out var service))
+            {
+                service.SendUdpMessage(udpSendMsg);
+            }
+            else
+            {
+                AppLogger.Error($"未找到UDPServerHandle: {udpSendMsg.UDPServerHandle}");
+            }
         }
         void OnSendMessage(object sender, EventArgsBase eventArgsBase)
         {
@@ -93,7 +143,7 @@ namespace RSJWYFamework.Runtime
         public override void Shutdown()
         {
             ModuleManager.GetModule<EventManager>().UnBindEvent<UDPSendMsgEventArgs>(OnSendMessage);
-            CloseUDPService();
+            CloseAllUDPServices();
         }
 
         public override void LifeUpdate()

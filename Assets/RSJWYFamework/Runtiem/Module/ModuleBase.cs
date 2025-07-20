@@ -7,9 +7,9 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public abstract class ModuleBase : MonoBehaviour, IModule
     {
+        public virtual int Priority => 99;
         public abstract void Initialize();
         public abstract void Shutdown();
-        public int Priority => 99;
         public abstract void LifeUpdate();
 
         public virtual void LifePerSecondUpdate()

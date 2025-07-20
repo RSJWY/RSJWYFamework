@@ -1,4 +1,3 @@
-using System.Reflection;
 
 namespace RSJWYFamework.Runtime
 {
@@ -7,6 +6,9 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public interface ILife
     {
+        /// <summary>
+        /// 生命周期执行优先级
+        /// </summary>
         int Priority { get; }
         void LifeUpdate();
         void LifePerSecondUpdate();

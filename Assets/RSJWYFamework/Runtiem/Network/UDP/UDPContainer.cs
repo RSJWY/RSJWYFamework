@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace RSJWYFamework.Runtime
@@ -10,7 +11,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
         /// </summary>
-        public string MsgToken;
+        public Guid MsgToken;
         /// <summary>
         /// 消息数据
         /// </summary>
@@ -19,6 +20,11 @@ namespace RSJWYFamework.Runtime
         /// 消息目标
         /// </summary>
         public IPEndPoint remoteEndPoint;
+
+        /// <summary>
+        /// 消息UDPServer Handle
+        /// </summary>
+        public Guid UDPServerHandle;
     }
 
     /// <summary>
@@ -27,10 +33,6 @@ namespace RSJWYFamework.Runtime
     public struct UDPSendCallBack
     {
         /// <summary>
-        /// 消息Token
-        /// </summary>
-        public string MsgToken{ get; internal set; }
-        /// <summary>
         /// 是否发送成功
         /// </summary>
         public bool Success{ get; internal set; }
@@ -38,6 +40,16 @@ namespace RSJWYFamework.Runtime
         /// 发送失败
         /// </summary>
         public string Error { get; internal set; }
+        
+        /// <summary>
+        /// 消息Token
+        /// </summary>
+        public Guid MsgToken{ get; internal set; }
+        
+        /// <summary>
+        /// 消息UDPServer Handle
+        /// </summary>
+        public Guid UDPServerHandle { get; internal set; }
     }
     /// <summary>
     /// UDP接收消息
@@ -62,6 +74,11 @@ namespace RSJWYFamework.Runtime
         /// 接收失败
         /// </summary>
         public string Error { get; internal set; }
+        
+        /// <summary>
+        /// 消息UDPServer Handle
+        /// </summary>
+        public Guid UDPServerHandle { get; internal set; }
     }
 
 }

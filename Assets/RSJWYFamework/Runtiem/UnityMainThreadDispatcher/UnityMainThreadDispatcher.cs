@@ -14,7 +14,6 @@ namespace RSJWYFamework.Runtiem
     {
         private static UnityMainThreadDispatcher _instance;
         private static readonly ConcurrentQueue<Action> _executionQueue = new ConcurrentQueue<Action>();
-        
 
         /// <summary>
         /// 将操作加入主线程执行队列

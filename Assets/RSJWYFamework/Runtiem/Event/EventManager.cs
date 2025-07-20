@@ -11,6 +11,7 @@ namespace RSJWYFamework.Runtime
     [Module]
     public class EventManager:ModuleBase
     {
+        public override int Priority => 0;
         /// <summary>
         /// 订阅者列表
         /// </summary>
@@ -69,6 +70,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 广播事件，不进入队列直接广播
         /// </summary>
+        /// <remarks>注意接收者是否允许非主线程调用</remarks>
         /// <param name="eventArgs">消息载体</param>
         public void FireNow(EventArgsBase eventArgs)
         {
@@ -79,6 +81,7 @@ namespace RSJWYFamework.Runtime
         }
         /// <summary>
         /// 广播事件，进入队列进行广播，每帧调用一次，由Unity Update生命周期调用
+        /// <remarks>适合需要交给unity主线程的广播</remarks>
         /// </summary>
         /// <param name="eventArgs"></param>
         public void Fire(EventArgsBase eventArgs)

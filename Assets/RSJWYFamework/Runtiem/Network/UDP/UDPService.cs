@@ -34,10 +34,6 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         ConcurrentQueue<UDPReciveMsg> _ReciveMsgQueue = new ();*/
         /// <summary>
-        /// 是否初始化过
-        /// </summary>
-        bool _isInit;
-        /// <summary>
         /// 消息发送线程
         /// </summary>
         Thread _sendMsgThread;
@@ -58,22 +54,29 @@ namespace RSJWYFamework.Runtime
         /// 读
         /// </summary>
         private SocketAsyncEventArgs _write;
-
-
+        
+        /// <summary>
+        /// UDP管理器
+        /// </summary>
         private UDPManager _udpManager;
-
-        internal UDPService(string _ip, int _port,UDPManager _udpManager)
+        
+        /// <summary>
+        /// 服务句柄
+        /// </summary>
+        private Guid _handle;
+        internal UDPService(string ip, int port,UDPManager udpManager, Guid handle)
         {
-            this._ip = IPAddress.Parse(_ip);
-            this._port = _port;
-            this._udpManager = _udpManager;
+            this._ip = IPAddress.Parse(ip);
+            this._port = port;
+            this._udpManager = udpManager;
+            this._handle = handle;
         }
 
-        internal UDPService(IPAddress _ipAddress, int _port,UDPManager _udpManager)
+        internal UDPService(IPAddress ipAddress, int port,UDPManager udpManager)
         {
-            _ip = _ipAddress;
-            this._port = _port;
-            this._udpManager = _udpManager;
+            _ip = ipAddress;
+            this._port = port;
+            this._udpManager = udpManager;
         }
 
         /// <summary>
@@ -82,10 +85,6 @@ namespace RSJWYFamework.Runtime
         /// <returns>true成功监听了或者初始化成功过一次了</returns>
         internal bool Bind()
         {
-            if (_isInit)
-            {
-                return true;
-            }
             try
             {
                 _udpClient = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -99,7 +98,6 @@ namespace RSJWYFamework.Runtime
                 _sendMsgThread = new Thread(SendMsgThread);
                 _sendMsgThread.IsBackground = true;//后台运行
                 _sendMsgThread.Start();
-                _isInit = true;
                 AppLogger.Log($"UDP启动监听 {_udpClient.LocalEndPoint.ToString()} ");
                 Start();
                 return true;
@@ -165,6 +163,7 @@ namespace RSJWYFamework.Runtime
                         Bytes = data,
                         remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
                         Error = string.Empty,
+                        UDPServerHandle = _handle
                     };
                     _udpManager.ReciveMsgCallBack(msg);
                 }
@@ -175,7 +174,8 @@ namespace RSJWYFamework.Runtime
                     {
                         Success=false,
                         remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
-                        Error=e.SocketError.ToString()
+                        Error=e.SocketError.ToString(),
+                        UDPServerHandle = _handle
                     };
                     _udpManager.ReciveMsgCallBack(msg);
                 }
@@ -187,7 +187,8 @@ namespace RSJWYFamework.Runtime
                 {
                     Success=false,
                     remoteEndPoint = e.RemoteEndPoint as IPEndPoint,
-                    Error=exception.ToString()
+                    Error=exception.ToString(),
+                    UDPServerHandle = _handle
                 };
                 _udpManager.ReciveMsgCallBack(msg);
             }
@@ -199,22 +200,17 @@ namespace RSJWYFamework.Runtime
                     Task.Run(() => ProcessReceived(e));
             }
         }
-        
-        
         /// <summary>
         /// 发送UDP消息
         /// </summary>
-        /// <returns>仅仅提示是否进入了发送队列，消息是否发送成功由SendCallBack回调处理</returns>
-        public bool SendUdpMessage(UDPSendMsg udpSendMsg)
+        public void SendUdpMessage(UDPSendMsg udpSendMsg)
         {
             if (_udpClient == null)
             {
                 AppLogger.Warning("UDP服务未初始化或已关闭，无法发送消息。");
-                return false;
             }
             // 发送数据
             _SendMsgQueue.Enqueue(udpSendMsg);
-            return true;
         }
         /// <summary>
         /// 消息发送完成回调
@@ -222,54 +218,36 @@ namespace RSJWYFamework.Runtime
         /// <param name="e"></param>
         private void ProcessSend(SocketAsyncEventArgs e)
         {
-            try
+            //不管是否发送成功，都从队列移除，并通知线程继续发送下一个消息
+            _SendMsgQueue.TryDequeue(out var _msg);
+            lock (_msgSendThreadLock)
             {
+                Monitor.Pulse(_msgSendThreadLock);
+            }
+            // 处理发送完成的逻辑
+            if (e.SocketError == SocketError.Success)
+            {
+               
                 _udpManager.SendMsgCallBack(new UDPSendCallBack()
                 {
                     Success = true,
                     Error = string.Empty,
+                    MsgToken = _msg.MsgToken,
+                    UDPServerHandle = _handle
                 });
-                /*if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
-                {
-                    /*if (_msg.data.Length!= e.BytesTransferred)
-                    {
-                        AppLogger.Error( $"一个本不该发生的错误，ProcessSend UDP消息发送错误！！！已发送长度和消息本体长度不同");
-                        _udpManager.SendMsgCallBack(new UDPSendCallBack()
-                        {
-                            Success=false,
-                            Error="一个本不该发生的错误，ProcessSend UDP消息发送错误！！！已发送长度和消息本体长度不同",
-                        });
-                    }#1#
-                    
-                }
-                else
-                {
-                    AppLogger.Warning($" ProcessSend UDP消息发送错误！！！SocketError：{e.SocketError}");
-                    _udpManager.SendMsgCallBack(new UDPSendCallBack()
-                    {
-                        Success = false,
-                        Error = $"ProcessSend UDP消息发送错误！！！SocketError：{e.SocketError}",
-                    });
-                }*/
             }
-            catch (Exception ex)
+            else
             {
-                AppLogger.Error($" ProcessSend UDP消息发送发生异常！：{ex}");
+                AppLogger.Error($"UDP 发送时发生错误，socker状态为：{e.SocketError}");
                 _udpManager.SendMsgCallBack(new UDPSendCallBack()
                 {
                     Success = false,
-                    Error = ex.ToString(),
+                    Error = e.SocketError.ToString(),
+                    MsgToken = _msg.MsgToken,
+                    UDPServerHandle = _handle
                 });
             }
-            finally
-            {
-                //无论什么发送状态，移除数据移除队列然后继续发送
-                _SendMsgQueue.TryDequeue(out var _msg);
-                lock (_msgSendThreadLock)
-                {
-                    Monitor.Pulse(_msgSendThreadLock);
-                }
-            }
+            
         }
         /// <summary>
         /// 消息发送监控线程
@@ -280,10 +258,10 @@ namespace RSJWYFamework.Runtime
             {
                 try
                 {
-                    //短暂休眠，避免CPU高占用
-                    Thread.Sleep(100);
                     if (_SendMsgQueue.Count <= 0)
                     {
+                        //短暂休眠，避免CPU高占用
+                        Thread.Sleep(100);
                         continue;
                     }
                     //取出数据
@@ -321,12 +299,7 @@ namespace RSJWYFamework.Runtime
         public void Close()
         {
             _cts?.Cancel();
-            if (_udpClient != null)
-            {
-                _udpClient.Close();
-            }
-
-            _isInit = false;
+            _udpClient?.Close();
         }
 
     }
