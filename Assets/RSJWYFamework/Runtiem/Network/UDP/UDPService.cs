@@ -72,7 +72,7 @@ namespace RSJWYFamework.Runtime
             this._handle = handle;
         }
 
-        internal UDPService(IPAddress ipAddress, int port,UDPManager udpManager)
+        internal UDPService(IPAddress ipAddress, int port,UDPManager udpManager, Guid handle)
         {
             _ip = ipAddress;
             this._port = port;
@@ -83,7 +83,7 @@ namespace RSJWYFamework.Runtime
         /// 初始化
         /// </summary>
         /// <returns>true成功监听了或者初始化成功过一次了</returns>
-        internal bool Bind()
+        internal void  Bind()
         {
             try
             {
@@ -100,12 +100,10 @@ namespace RSJWYFamework.Runtime
                 _sendMsgThread.Start();
                 AppLogger.Log($"UDP启动监听 {_udpClient.LocalEndPoint.ToString()} ");
                 Start();
-                return true;
             }
             catch (Exception e)
             {
                 AppLogger.Error($"UDP启动监听 {_udpClient.LocalEndPoint.ToString()} 失败！！错误信息：\n {e.ToString()}");
-                return false;
             }
         }
         /// <summary>

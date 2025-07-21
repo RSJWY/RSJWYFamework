@@ -1,14 +1,21 @@
 namespace RSJWYFamework.Runtime
 {
-    public sealed class UDPReciveMsgEventArgs: EventArgsBase
+    /// <summary>
+    /// UDP基本广播事件
+    /// </summary>
+    public abstract class UDPSoketBaseEventArgs:EventArgsBase
+    {
+                
+    }
+    public sealed class UDPSoketReciveMsgEventArgs: UDPSoketBaseEventArgs
     {
         public UDPReciveMsg UDPReciveMsg;
     }
-    public sealed class UDPSendCallBackEventArgs: EventArgsBase
+    public sealed class UDPSoketSendCallBackEventArgs: UDPSoketBaseEventArgs
     {
         public UDPSendCallBack UDPSendCallBack;
     }
-    public sealed class UDPSendMsgEventArgs: EventArgsBase
+    public sealed class UDPSoketSendMsgEventArgs: UDPSoketBaseEventArgs
     {
         public UDPSendMsg UDPSendMsg;
     }

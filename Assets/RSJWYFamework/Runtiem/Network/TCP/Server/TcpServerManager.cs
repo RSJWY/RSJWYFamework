@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 
 namespace RSJWYFamework.Runtime
@@ -9,72 +10,167 @@ namespace RSJWYFamework.Runtime
     [Module()]
     public class TcpServerManager :ModuleBase
     {
-        private TcpServerService tcpsocket;
-        
+        /// <summary>
+        /// TCP字典
+        /// </summary>
+        private readonly ConcurrentDictionary<Guid, TcpServerService> tcpServiceDic = new();
 
 
-        public void Bind(string ip , int port)
+        public override void Initialize()
         {
-            if (Utility.SocketTool.MatchIP(ip) && Utility.SocketTool.MatchPort(port))
+            ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
+            ModuleManager.GetModule<EventManager>().BindEvent<SendMsgToAllServerAllClient>(SendMsgToAllServerAllClientEvent);
+            ModuleManager.GetModule<EventManager>().BindEvent<SendMsgToServerAllClient>(SendMsgToServerAllClientEvent);
+        }
+
+
+        public override void Shutdown()
+        {
+            ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
+            ModuleManager.GetModule<EventManager>().UnBindEvent<SendMsgToAllServerAllClient>(SendMsgToAllServerAllClientEvent);
+            ModuleManager.GetModule<EventManager>().UnBindEvent<SendMsgToServerAllClient>(SendMsgToServerAllClientEvent);
+            CloseAllServer();
+        }
+        /// <summary>
+        /// 服务端是否存在
+        /// </summary>
+        public bool IsExistServer(Guid serverHandle)
+        {
+            return tcpServiceDic.ContainsKey(serverHandle);
+        }
+        /// <summary>
+        /// 客户端是否存在
+        /// </summary>
+        /// <remarks>注意，最好结合IsExistServer处理</remarks>
+        /// <returns>如果服务端不存在，则直接返回false，需要结合IsExistServer处理</returns>
+        public bool IsExistClient(Guid serverHandle, Guid clientHandle)
+        {
+            if (tcpServiceDic.TryGetValue(serverHandle, out var tcpService) )
             {
-                tcpsocket=new TcpServerService(ip,port,this);
-                tcpsocket.Bind();
+                return tcpService.ClientDic.ContainsKey(clientHandle);
+            }
+            return false;
+        }
+
+        
+       
+        /// <summary>
+        /// 启动一个新的服务端
+        /// </summary>
+        /// <param name="ip"></param>
+        /// <param name="port"></param>
+        /// <returns></returns>
+        public Guid Bind(string ip , int port)
+        {
+            try
+            {
+                if (!Utility.SocketTool.MatchIP(ip) || !Utility.SocketTool.MatchPort(port))
+                {
+                    AppLogger.Error($"无效的地址: {ip}:{port}");
+                    return Guid.Empty;
+                }
+                var handle = Guid.NewGuid();
+                var service = new TcpServerService(ip, port, this, handle);
+                service.Bind();
+                if (!tcpServiceDic.TryAdd(handle,service))
+                {
+                    service.CloseServer();
+                    AppLogger.Error($"Handle冲突: {handle}");
+                    return Guid.Empty;
+                }
+                return handle;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Bind失败: {ex.Message}");
+                return Guid.Empty;
             }
         }
-
-        /// <summary>
-        /// 接收发送消息事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="eventArgsBase"></param>
-        public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
+        public override void LifeUpdate()
         {
-            if (eventArgsBase is ServerToClientMsgEventArgs args)
-                SendMsgToClient(args.msgBase,args.ClientSocketToken);
         }
+        
+        
         /// <summary>
         /// 接收广播所有消息事件
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="eventArgsBase"></param>
-        public void SendMsgToClientAllEvent(object sender, EventArgsBase eventArgsBase)
+        public void SendMsgToAllServerAllClientEvent(object sender, EventArgsBase eventArgsBase)
         {
-            if (eventArgsBase is not ServerToClientMsgAllEventArgs args) return;
-            SendMsgToClientAll(args.msgBase);
+            if (eventArgsBase is SendMsgToAllServerAllClient args) 
+                SendMsgToAllServerAllClient(args.data);
         }
         /// <summary>
-        /// 向所有连接上来设备广播消息
+        /// 接收通过指定服务端向已连接设备广播消息
         /// </summary>
-        /// <param name="msgBase"></param>
-        public void SendMsgToClientAll(byte[] msgBase)
+        private void SendMsgToServerAllClientEvent(object sender, EventArgsBase eventArgsBase)
         {
-            foreach (var token in tcpsocket.ClientDic)
+            if (eventArgsBase is SendMsgToServerAllClient args) 
+                SendMsgToServerAllClient(args.data,args.ServerHandle);
+        }
+        /// <summary>
+        /// 向所有连接上来设备所有客户端广播消息
+        /// </summary>
+        /// <param name="msgBytes"></param>
+        public void SendMsgToAllServerAllClient(byte[] msgBytes)
+        {
+            foreach (var serveice in tcpServiceDic)
             {
-                tcpsocket.SendMessage(msgBase, token.Value);
+                SendMsgToServerAllClient(msgBytes,serveice.Key);
             }
         }
+
+        /// <summary>
+        /// 向指定服务端的所有客户端广播消息
+        /// </summary>
+        /// <param name="msgBase"></param>
+        public void SendMsgToServerAllClient(byte[] msgBytes,Guid serverHandle)
+        {
+            if (tcpServiceDic.TryGetValue(serverHandle, out var service))
+            {
+                service.SendToAllClientMessage(msgBytes);
+            }
+            else
+            {
+                AppLogger.Error($"服务端Handle不存在: {serverHandle}");
+            }
+        }
+        
         /// <summary>
         /// 向指定客户端发送消息
         /// </summary>
         /// <param name="msgBase"></param>
-        /// <param name="clientSocketToken"></param>
-        public void SendMsgToClient(byte[]  msgBase,ClientSocketToken clientSocketToken)
+        /// <param name="clientSocketContainer"></param>
+        public void SendMsgToClient(TCPServertToClientMsg msgContainer)
         {
-            tcpsocket?.SendMessage(msgBase,clientSocketToken);
+            if (tcpServiceDic.TryGetValue(msgContainer.ServerHandle,out var tcpServerService))
+            {
+                tcpServerService?.SendMessage(msgContainer.data,msgContainer.ClientHandle,msgContainer.MsgToken);
+            }
+            else
+            {
+                AppLogger.Error($"服务端Handle不存在: {msgContainer.ServerHandle}");
+            }
         }
-
-
+        
+        /// <summary>
+        /// 接收发送消息事件
+        /// </summary>
+        public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
+        {
+            if (eventArgsBase is ServerToClientMsgEventArgs args)
+                SendMsgToClient(args.msgContainer);
+        }
+        
         /// <summary>
         /// 客户端链接上来
         /// </summary>
-        /// <param name="clientSocketToken"></param>
-        public void ClientConnectedCallBack(ClientSocketToken clientSocketToken)
+        public void ClientConnectedCallBack(Guid serverHandle,Guid clientHandle)
         {
             var _event = new ServerClientConnectedCallBackEventArgs
             {
                 Sender = this,
-                ClientSocketToken = clientSocketToken,
-                msgBase = null
+                ServerHandle = serverHandle,
+                ClientHandle = clientHandle,
             };
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
@@ -82,14 +178,13 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 客户端离线
         /// </summary>
-        /// <param name="clientSocketToken"></param>
-        public void CloseClientReCallBack(ClientSocketToken clientSocketToken)
+        public void CloseClientReCallBack(Guid serverHandle,Guid clientHandle)
         {
             var _event = new ServerCloseClientCallBackEventArgs
             {
                 Sender = this,
-                ClientSocketToken = clientSocketToken,
-                msgBase = null
+                ServerHandle = serverHandle,
+                ClientHandle = clientHandle,
             };
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
@@ -98,44 +193,48 @@ namespace RSJWYFamework.Runtime
         /// 服务端状态更新
         /// </summary>
         /// <param name="netServerStatus"></param>
-        public void ServerServiceStatus(NetServerStatus netServerStatus)
+        public void ServerServiceStatus(Guid serverHandle,NetServerStatus netServerStatus)
         {
             var _event = new ServerStatusEventArgs
             {
                 Sender = this,
+                ServerHandle = serverHandle,
                 status = netServerStatus
             };
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
-        public void FromClientReceiveMsgCallBack(ClientSocketToken clientSocketToken, byte[] msgBase)
+        internal void FromClientReceiveMsgCallBack(TCPClientToServerMsg msgContainer)
         {
             var _event= new FromClientReceiveMsgCallBackEventArgs
             {
                 Sender = this,
-                ClientSocketToken = clientSocketToken,
-                msgBase = msgBase
+                msgContainer = msgContainer
             };
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
-
-
-        public override void Initialize()
+        /// <summary>
+        /// 关闭指定服务端
+        /// </summary>
+        /// <param name="serverHandle"></param>
+        void CloseServer(Guid serverHandle)
         {
-            ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
+            if (tcpServiceDic.TryGetValue(serverHandle, out var tcpServerService))
+            {
+                tcpServerService.CloseServer();
+                tcpServiceDic.TryRemove(serverHandle, out tcpServerService);
+            }
         }
-
-        public override void Shutdown()
+        /// <summary>
+        /// 关闭所有服务端
+        /// </summary>
+        void CloseAllServer()
         {
-            ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgAllEventArgs>(SendMsgToClientAllEvent);
-            tcpsocket?.Quit();
-        }
-
-        public override void LifeUpdate()
-        {
+            foreach (var server in tcpServiceDic)
+            {
+                server.Value.CloseServer();
+            }
         }
     }
 }

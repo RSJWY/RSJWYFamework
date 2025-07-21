@@ -34,11 +34,7 @@ namespace RSJWYFamework.Runtime
                 var handle = Guid.NewGuid();
                 var service = new UDPService(ip, port, this, handle);
 
-                if (!service.Bind()) 
-                {
-                    service.Close();
-                    return Guid.Empty;
-                }
+                service.Bind();
 
                 if (!udpServiceDic.TryAdd(handle, service)) 
                 {
@@ -63,6 +59,11 @@ namespace RSJWYFamework.Runtime
             if (udpServiceDic.TryRemove(handle, out var service))
             {
                 service.Close();
+                udpServiceDic.TryRemove(handle, out service);
+            }
+            else
+            {
+                AppLogger.Error($"未找到UDP服务: {handle}");
             }
         }
 
@@ -84,7 +85,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="udpReciveMsg"></param>
         internal void ReciveMsgCallBack(UDPReciveMsg udpReciveMsg)
         {
-            ModuleManager.GetModule<EventManager>().Fire(new UDPReciveMsgEventArgs
+            ModuleManager.GetModule<EventManager>().Fire(new UDPSoketReciveMsgEventArgs
             {
                 Sender = this,
                 UDPReciveMsg = udpReciveMsg
@@ -97,7 +98,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="udpSendCallBack"></param>
         internal void SendMsgCallBack(UDPSendCallBack udpSendCallBack)
         {
-            ModuleManager.GetModule<EventManager>().Fire(new UDPSendCallBackEventArgs
+            ModuleManager.GetModule<EventManager>().Fire(new UDPSoketSendCallBackEventArgs
             {
                 Sender = this,
                 UDPSendCallBack = udpSendCallBack
@@ -130,19 +131,19 @@ namespace RSJWYFamework.Runtime
         }
         void OnSendMessage(object sender, EventArgsBase eventArgsBase)
         {
-            if (eventArgsBase is UDPSendMsgEventArgs args)
+            if (eventArgsBase is UDPSoketSendMsgEventArgs args)
             {
                 SendUdpMessage(args.UDPSendMsg);
             }
         }
         public override void Initialize()
         {
-            ModuleManager.GetModule<EventManager>().BindEvent<UDPSendMsgEventArgs>(OnSendMessage);
+            ModuleManager.GetModule<EventManager>().BindEvent<UDPSoketSendMsgEventArgs>(OnSendMessage);
         }
         
         public override void Shutdown()
         {
-            ModuleManager.GetModule<EventManager>().UnBindEvent<UDPSendMsgEventArgs>(OnSendMessage);
+            ModuleManager.GetModule<EventManager>().UnBindEvent<UDPSoketSendMsgEventArgs>(OnSendMessage);
             CloseAllUDPServices();
         }
 

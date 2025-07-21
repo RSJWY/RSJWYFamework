@@ -46,7 +46,6 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 解除绑定
         /// </summary>
-        /// <param name="callback">事件回调</param>
         public void UnBindEvent<T>(EventHandler<EventArgsBase> callback)where T:EventArgsBase
         {
             var type = typeof(T);
@@ -71,7 +70,6 @@ namespace RSJWYFamework.Runtime
         /// 广播事件，不进入队列直接广播
         /// </summary>
         /// <remarks>注意接收者是否允许非主线程调用</remarks>
-        /// <param name="eventArgs">消息载体</param>
         public void FireNow(EventArgsBase eventArgs)
         {
             if (_callBackDic.TryGetValue(eventArgs.GetType(), out var handler))
@@ -81,16 +79,16 @@ namespace RSJWYFamework.Runtime
         }
         /// <summary>
         /// 广播事件，进入队列进行广播，每帧调用一次，由Unity Update生命周期调用
-        /// <remarks>适合需要交给unity主线程的广播</remarks>
         /// </summary>
-        /// <param name="eventArgs"></param>
+        /// <remarks>适合需要交给unity主线程的广播</remarks>
         public void Fire(EventArgsBase eventArgs)
         {
             _callQueue.Enqueue(eventArgs);
         }
         public override void Initialize()
         {
-            
+            _callBackDic.Clear();
+            _callQueue.Clear();
         }
 
         public override void Shutdown()

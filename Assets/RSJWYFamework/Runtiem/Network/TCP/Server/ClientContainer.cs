@@ -9,27 +9,27 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 服务器模块 单独客户端容器，存储客户端的相关信息等
     /// </summary>
-    public class ClientSocketToken
+    internal class ClientSocketContainer
     {
         /// <summary>
         /// 心跳包维持记录
         /// </summary>
-        public long lastPingTime { get; internal set; }
-        
+        public long lastPingTime;
+
         /// <summary>  
         /// 客户端IP地址  
         /// </summary>  
-        public IPAddress IPAddress { get; internal set; }  
-  
+        public IPAddress IPAddress;
+
         /// <summary>  
         /// 远程地址  
         /// </summary>  
-        public EndPoint Remote { get; internal set; }  
-        
+        public EndPoint Remote;
+
         /// <summary>  
         /// 连接时间  
         /// </summary>  
-        public DateTime ConnectTime { get; internal set; }
+        public DateTime ConnectTime;
 
         /// <summary>
         /// 存储连接的客户端
@@ -46,7 +46,11 @@ namespace RSJWYFamework.Runtime
         /// 需要做一个定时检查，出现重复拒绝链接以及移除已有链接，重新发起连接
         /// </summary>
         /// <returns></returns>
-        public string TokenID{ get; internal set; }
+        public Guid TokenID;
+        /// <summary>
+        /// 所属的server
+        /// </summary>
+        internal TcpServerService ServerService;
 
         /// <summary>
         /// 写
@@ -77,11 +81,10 @@ namespace RSJWYFamework.Runtime
         internal Thread PingPongThread;
         
         /// <summary>
-        ///  消息队列发送锁
+        /// 消息队列发送锁
         /// </summary>
         internal object msgSendThreadLock ;
 
-        internal TcpServerService ServerService;
         
         /// <summary>
         /// 关闭
@@ -118,7 +121,7 @@ namespace RSJWYFamework.Runtime
                     //检测心跳包是否超时的计算
                     //获取当前时间
                     long timeNow = Utility.Timestamp.UnixTimestampMilliseconds;
-                    if (timeNow-lastPingTime>TcpServerService.pingInterval*4)
+                    if (timeNow-lastPingTime>ServerService.pingInterval*4)
                     {
                         ServerService.CloseClientSocket(this);
                     }
@@ -135,6 +138,7 @@ namespace RSJWYFamework.Runtime
             }
         }
     }
+    
     /// <summary>
     ///消息发送数据容器
     /// </summary>
@@ -143,30 +147,102 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息目标服务器
         /// </summary>
-        internal ClientSocketToken TargetToken;
+        internal ClientSocketContainer TargetContainer;
         /// <summary>
         /// 已转换完成的消息数组
         /// </summary>
         internal ByteArrayMemory SendBytes;
+        
+        /// <summary>
+        /// 消息发送Token，用于本机发送完成回调唯一标记
+        /// </summary>
+        public Guid MsgToken;
 
     }
-    
-    
-    
+
     /// <summary>
-    /// 接收到的客户端消息容器
+    /// TCP服务器发送给客户端的消息
     /// </summary>
-    internal class ClientMsgContainer 
+    public struct TCPServertToClientMsg
     {
         /// <summary>
-        /// 消息来源
+        /// 消息发送Token，用于本机发送完成回调唯一标记
         /// </summary>
-        internal ClientSocketToken TargetToken;
-
+        public Guid MsgToken;
         /// <summary>
-        /// 消息
+        /// 消息数据
         /// </summary>
-        internal byte[] msg;
-
+        public byte[] data;
+        
+        /// <summary>
+        /// 消息服务器Handle
+        /// </summary>
+        public Guid ServerHandle;
+        
+        /// <summary>
+        /// 消息客户端Handle
+        /// </summary>
+        public Guid ClientHandle;
+        
+    }
+    
+    /// <summary>
+    /// TCP服务器发送给客户端的消息回调
+    /// </summary>
+    public struct TCPServertToClientMsgCallBack
+    {
+        /// <summary>
+        /// 是否发送成功
+        /// </summary>
+        public bool Success{ get; internal set; }
+        /// <summary>
+        /// 发送失败
+        /// </summary>
+        public string Error { get; internal set; }
+        
+        /// <summary>
+        /// 消息Token
+        /// </summary>
+        public Guid MsgToken{ get; internal set; }
+        
+        /// <summary>
+        /// 消息TCPServer Handle
+        /// </summary>
+        public Guid TCPServerHandle { get; internal set; }
+        
+        /// <summary>
+        /// 消息UDPClient Handle
+        /// </summary>
+        public Guid TCPClientHandle { get; internal set; }
+    }
+    /// <summary>
+    /// 服务器接收到的来自客户端消息容器
+    /// </summary>
+    public struct TCPClientToServerMsg
+    {
+        /// <summary>
+        /// 消息TCPServer Handle
+        /// </summary>
+        public Guid TCPServerHandle { get; internal set; }
+        
+        /// <summary>
+        /// 消息UDPClient Handle
+        /// </summary>
+        public Guid TCPClientHandle { get; internal set; }
+        
+        /// <summary>
+        /// 消息数据
+        /// </summary>
+        public byte[] msgBytes{ get; internal set; }
+        
+        /// <summary>
+        /// 接收是否成功
+        /// </summary>
+        public bool Success { get; internal set; }
+        
+        /// <summary>
+        /// 接收失败原因
+        /// </summary>
+        public string Error { get; internal set; }
     }
 }

@@ -50,15 +50,11 @@ namespace RSJWYFamework.Runtime
                 if (_status != value)
                 {
                     _status = value;
-                    _tcpServerManager?.ServerServiceStatus(_status);
+                    _tcpServerManager?.ServerServiceStatus(_handle,_status);
                 }
             }
         }
         
-        /// <summary>
-        /// 绑定的服务端控制器
-        /// </summary>
-        internal TcpServerManager _tcpServerManager;
         /// <summary>
         /// 消息体加密接口
         /// </summary>
@@ -76,44 +72,39 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 心跳包间隔时间
         /// </summary>
-        internal static long pingInterval = 60;
+        internal long pingInterval = 60;
 
         /// <summary>
         /// 服务器监听Socket
         /// </summary>
-        static Socket ListenSocket;
+        private Socket ListenSocket;
 
 
         /// <summary>
         /// 客户端容器字典
         /// </summary>
-        internal ConcurrentDictionary<Socket, ClientSocketToken> ClientDic = new ConcurrentDictionary<System.Net.Sockets.Socket, ClientSocketToken>();
+        internal ConcurrentDictionary<Guid, ClientSocketContainer> ClientDic { get; private set; }= new ();
 
         /// <summary>
         /// 服务器接收的消息队列
         /// </summary>
-        static ConcurrentQueue<ClientMsgContainer> serverMsgQueue = new();
+        private ConcurrentQueue<TCPClientToServerMsg> serverMsgQueue = new();
 
 
         /// <summary>
         /// 消息处理线程
         /// </summary>
-        static Thread msgThread;
+        private Thread msgThread;
         /// <summary>
         /// 心跳包监测线程
         /// </summary>
-        static Thread pingThread;
+        private Thread pingThread;
 
         /// <summary>
         /// 通知多线程自己跳出
         /// </summary>
-        private static CancellationTokenSource cts;
+        private CancellationTokenSource cts;
 
-        /// <summary>
-        /// 是否已经初始化
-        /// </summary>
-        bool isInit = false;
-        
         /// <summary>
         /// 已连接客户端数量
         /// </summary>
@@ -124,21 +115,32 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private SocketAsyncEventPool RWSocketAsynEA;
         
+        /// <summary>
+        /// 绑定的服务端控制器
+        /// </summary>
+        private TcpServerManager _tcpServerManager;
+        
+        /// <summary>
+        /// 服务句柄
+        /// </summary>
+        private Guid _handle;
         
 
         #region 初始化
 
-        internal TcpServerService(string ip, int port,TcpServerManager tcpServerManager)
+        internal TcpServerService(string ip, int port,TcpServerManager tcpServerManager, Guid handle)
         {
             this._ip = IPAddress.Parse(ip);
             port = port;
             _tcpServerManager = tcpServerManager;
+            this._handle = handle;
         }
-        internal TcpServerService(IPAddress ipAddress, int port,TcpServerManager tcpServerManager)
+        internal TcpServerService(IPAddress ipAddress, int port,TcpServerManager tcpServerManager, Guid handle)
         {
             _ip = ipAddress;
             port = _port;
             _tcpServerManager = tcpServerManager;
+            this._handle = handle;
         }
 
 
@@ -202,7 +204,7 @@ namespace RSJWYFamework.Runtime
         #endregion
 
         #region 功能处理
-
+        
         /// <summary>
         /// 开启接受连接请求
         /// </summary>
@@ -244,7 +246,6 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private void ProcessAccept(SocketAsyncEventArgs socketAsyncEArgs)  
         {
-            
             // 接受下一个连接
             if (socketAsyncEArgs.SocketError == SocketError.OperationAborted)
             {
@@ -256,7 +257,7 @@ namespace RSJWYFamework.Runtime
                 Interlocked.Increment(ref m_clientCount); //计数 //获取一个空闲的  
 
                 //创建并存储客户端信息
-                var clientToken = new ClientSocketToken
+                var clientToken = new ClientSocketContainer
                 {
                     lastPingTime = Utility.Timestamp.UnixTimestampMilliseconds,
                     socket = socketAsyncEArgs.AcceptSocket,
@@ -269,7 +270,8 @@ namespace RSJWYFamework.Runtime
                     sendQueue = new(),
                     cts = new(),
                     msgSendThreadLock = new(),
-                    ServerService=this
+                    ServerService=this,
+                    TokenID = Guid.NewGuid(),
                 };
                 //绑定线程
                 //消息发送线程
@@ -284,11 +286,11 @@ namespace RSJWYFamework.Runtime
                 clientToken.PingPongThread.Start();
 
                 //添加和绑定
-                ClientDic.TryAdd(clientToken.socket, clientToken);
+                ClientDic.TryAdd(clientToken.TokenID, clientToken);
                 clientToken.readSocketAsyncEA.UserToken = clientToken;
                 clientToken.writeSocketAsyncEA.UserToken = clientToken;
                 //广播消息
-                _tcpServerManager.ClientConnectedCallBack(clientToken);
+                _tcpServerManager.ClientConnectedCallBack(_handle,clientToken.TokenID);
                 AppLogger.Log($"一个客户端连接上来：{clientToken.Remote},当前设备数：{m_clientCount}");
 
                 //接受消息传入请求
@@ -328,8 +330,8 @@ namespace RSJWYFamework.Runtime
         private void ProcessReceive(SocketAsyncEventArgs socketAsyncEA)
         {
             // 检查连接状态
-            var token = (ClientSocketToken)socketAsyncEA.UserToken;
-            if (!ClientDic.ContainsKey(token.socket))
+            var token = (ClientSocketContainer)socketAsyncEA.UserToken;
+            if (!ClientDic.ContainsKey(token.TokenID))
             {
                 //可能后期会移除
                 AppLogger.Warning($"无法找到用于存储的客户端容器，无法执行接收,可能已经断开链接，当前数量为：{ClientDic.Count}");
@@ -380,7 +382,7 @@ namespace RSJWYFamework.Runtime
                                 //生成心跳包返回给客户端
                                 ServerToClientMsgContainer pingpongMsg = new()
                                 {
-                                    TargetToken = token,
+                                    TargetContainer = token,
                                     SendBytes = Utility.TCPSocketTool.SendPingPong()
                                 };
                                 token.sendQueue.Enqueue(pingpongMsg);
@@ -388,10 +390,13 @@ namespace RSJWYFamework.Runtime
                             else
                             {
                                 //把数据放入队列
-                                var msgContainer = new ClientMsgContainer()
+                                var msgContainer = new TCPClientToServerMsg()
                                 {
-                                    TargetToken= token,
-                                    msg= decodeMsg.msgBase,
+                                    TCPServerHandle = _handle,
+                                    TCPClientHandle = token.TokenID,
+                                    msgBytes= decodeMsg.msgBase,
+                                    Success = true,
+                                    Error = string.Empty,
                                 }; 
                                 serverMsgQueue.Enqueue(msgContainer);
                             }
@@ -418,16 +423,39 @@ namespace RSJWYFamework.Runtime
                 CloseClientSocket(token);
             }
         }
+
+        internal void SendToAllClientMessage(byte[] msgBytes)
+        {
+            foreach (var client in ClientDic)
+            {
+                SendMessage(msgBytes,client.Value,Guid.Empty);
+            }
+        }
         
         /// <summary>
         /// 发送信息到客户端
         /// </summary>
-        /// <param name="msgBase">消息内容</param>
-        /// <param name="targetToken">目标客户端标志</param>
-        /// <returns>仅确保数据转换完毕，可以发送，但不确保数据发送成功</returns>
-        internal void SendMessage(byte[] msgBase,ClientSocketToken targetToken)
+        internal void SendMessage(byte[] msgBytes,Guid ClentHandle,Guid MsgToken)
         {
-            if (targetToken?.socket is not { Connected: true })
+            if (ClientDic.TryGetValue(ClentHandle,out var targetContainer))
+            {
+                SendMessage(msgBytes,targetContainer,MsgToken);
+            }
+            else
+            {
+                AppLogger.Warning($"未找到目标客户端，无法发送消息");
+            }
+        }
+
+        /// <summary>
+        /// 发送信息到客户端内部操作
+        /// </summary>
+        /// <param name="msgBytes"></param>
+        /// <param name="targetContainer"></param>
+        /// <param name="MsgToken"></param>
+        void SendMessage(byte[] msgBytes,ClientSocketContainer targetContainer,Guid MsgToken)
+        {
+            if (targetContainer?.socket is not { Connected: true })
             {
                 AppLogger.Error($"Socket链接未设置或者未建立链接");
                 return;//链接不存在或者未建立链接
@@ -435,20 +463,21 @@ namespace RSJWYFamework.Runtime
             //写入数据
             try
             {
-                if (!targetToken.socket.Poll(100, SelectMode.SelectWrite))
+                if (!targetContainer.socket.Poll(100, SelectMode.SelectWrite))
                 {
                     AppLogger.Error($"Socket状态不可写");
                     return;//链接不存在或者未建立链接
                 }
                 //编码
-                var sendBytes = Utility.TCPSocketTool.EncodeMsg(msgBase,m_MsgBodyEncrypt);
+                var sendBytes = Utility.TCPSocketTool.EncodeMsg(msgBytes,m_MsgBodyEncrypt);
                 //创建容器
                 ServerToClientMsgContainer msg = new()
                 {
-                    TargetToken = targetToken,
-                    SendBytes = sendBytes
+                    TargetContainer = targetContainer,
+                    SendBytes = sendBytes,
+                    MsgToken = MsgToken,
                 };
-                targetToken.sendQueue.Enqueue(msg);
+                targetContainer.sendQueue.Enqueue(msg);
                 //写入到队列，向客户端发送消息，根据客户端和绑定的数据发送
             }
             catch (SocketException ex)
@@ -465,8 +494,8 @@ namespace RSJWYFamework.Runtime
         /// <param name="socketAsyncEA"></param>
         private void ProcessSend(SocketAsyncEventArgs socketAsyncEA)
         {
-            var clientToken = (ClientSocketToken)socketAsyncEA.UserToken;
-            if (!ClientDic.ContainsKey(clientToken.socket))
+            var clientToken = (ClientSocketContainer)socketAsyncEA.UserToken;
+            if (!ClientDic.ContainsKey(clientToken.TokenID))
             {
                 //可能后期会移除
                 AppLogger.Warning($"无法找到用于存储的客户端容器，无法执行接收,可能已经断开链接，当前数量为：{ClientDic.Count}");
@@ -494,7 +523,7 @@ namespace RSJWYFamework.Runtime
                     {
                         //重新获取可用数据切片作为发送数据
                         socketAsyncEA.SetBuffer(_ba.GetRemainingSlices());
-                        if (!_msgbase.TargetToken.socket.SendAsync(socketAsyncEA))
+                        if (!_msgbase.TargetContainer.socket.SendAsync(socketAsyncEA))
                             Task.Run(() => ProcessSend(socketAsyncEA));
                     }
                 }
@@ -529,33 +558,29 @@ namespace RSJWYFamework.Runtime
         /// 关闭客户端
         /// </summary>
         /// <param name="targetSocket"></param>
-        public void CloseClientSocket(ClientSocketToken ClientToken)
+        internal void CloseClientSocket(ClientSocketContainer clientContainer)
         {
-            ClientDic.TryRemove(ClientToken.socket, out var _);
+            ClientDic.TryRemove(clientContainer.TokenID, out var _);
                 
             Interlocked.Decrement(ref m_clientCount);
-            _tcpServerManager.CloseClientReCallBack(ClientToken);
-            ClientToken.Close();
+            _tcpServerManager.CloseClientReCallBack(_handle,clientContainer.TokenID);
+            clientContainer.Close();
             // 释放SocketAsyncEventArgs,并放回池子中
-            if (ClientToken.readSocketAsyncEA!=null)
-                RWSocketAsynEA.Release(ClientToken.readSocketAsyncEA);
-            if (ClientToken.writeSocketAsyncEA != null)
-                RWSocketAsynEA.Release(ClientToken.writeSocketAsyncEA);
+            if (clientContainer.readSocketAsyncEA!=null)
+                RWSocketAsynEA.Release(clientContainer.readSocketAsyncEA);
+            if (clientContainer.writeSocketAsyncEA != null)
+                RWSocketAsynEA.Release(clientContainer.writeSocketAsyncEA);
             AppLogger.Log($"一个客户端断开连接，当前连接总数：{m_clientCount}");
         }
         /// <summary>
         /// 关闭服务器，关闭所有已经链接上来的socket以及关闭多余线程
         /// </summary>
-        public void Quit()
+        public void CloseServer()   
         {
-            if (!isInit)
-            {
-                return;
-            }
             Status = NetServerStatus.CloseListening;
             cts.Cancel();
             //关闭所有已经链接上来的socket
-            List<ClientSocketToken> _tmp = ClientDic
+            List<ClientSocketContainer> _tmp = ClientDic
                 .Select(x=>x.Value)
                 .ToList();
             // lock ((clientList as ICollection).SyncRoot)
@@ -582,36 +607,36 @@ namespace RSJWYFamework.Runtime
         /// 消息队列发送监控线程
         /// 分配到每一个的客户端容器内
         /// </summary>
-        void MsgSendListenThread(ClientSocketToken clientSocketToken)
+        void MsgSendListenThread(ClientSocketContainer clientSocketContainer)
         {
-            while (!clientSocketToken.cts.Token.IsCancellationRequested)
+            while (!clientSocketContainer.cts.Token.IsCancellationRequested)
             {
                 try
                 {
-                    if (clientSocketToken.sendQueue.Count <= 0)
+                    if (clientSocketContainer.sendQueue.Count <= 0)
                     {
                         Thread.Sleep(10);
                         continue;
                     }
 
                     //取出消息队列内的消息，但不移除队列，以获取目标客户端
-                    clientSocketToken.sendQueue.TryPeek(out var _msgbase);
+                    clientSocketContainer.sendQueue.TryPeek(out var _msgbase);
                     //_msgbase.targetToken.writeSocketAsyncEA.SetBuffer(_msgbase.SendOldBytes.Bytes, _msgbase.SendOldBytes.ReadIndex,_msgbase.SendOldBytes.length);
                     var data = _msgbase.SendBytes.GetRemainingSlices();
-                    _msgbase.TargetToken.writeSocketAsyncEA.SetBuffer(data);
+                    _msgbase.TargetContainer.writeSocketAsyncEA.SetBuffer(data);
                     //当前线程执行休眠，等待消息发送完成后继续
-                    lock (clientSocketToken.msgSendThreadLock)
+                    lock (clientSocketContainer.msgSendThreadLock)
                     {
-                        if (!_msgbase.TargetToken.socket.SendAsync( _msgbase.TargetToken.writeSocketAsyncEA))
-                            Task.Run(()=>ProcessSend(_msgbase.TargetToken.writeSocketAsyncEA));
+                        if (!_msgbase.TargetContainer.socket.SendAsync( _msgbase.TargetContainer.writeSocketAsyncEA))
+                            Task.Run(()=>ProcessSend(_msgbase.TargetContainer.writeSocketAsyncEA));
                         //等待SendCallBack完成回调释放本锁再继续执行，超时10秒
-                        Monitor.Wait(clientSocketToken.msgSendThreadLock);
+                        Monitor.Wait(clientSocketContainer.msgSendThreadLock);
                     }
                 }
                 catch (Exception ex)
                 {
                     AppLogger.Error( $"消息发送时发生错误：{ex.Message}");
-                    if (clientSocketToken.cts.Token.IsCancellationRequested)
+                    if (clientSocketContainer.cts.Token.IsCancellationRequested)
                     {
                         AppLogger.Warning( $"请求取消任务");
                         break;
@@ -633,21 +658,17 @@ namespace RSJWYFamework.Runtime
                         Thread.Sleep(10);
                         continue;//当前无消息，跳过进行下一次排查处理
                     }
-                    //有待处理的消息
-                    ClientMsgContainer _msg = null;
                     //取出并移除取出来的数据
-                    if (!serverMsgQueue.TryDequeue(out _msg))
+                    if (!serverMsgQueue.TryDequeue(out var _msg))
                     {
                         AppLogger.Error($"取出并处理消息队列失败！！");
-                        continue;
                     }
-                    //处理取出来的数据
-                    if (_msg != null)
+                    else
                     {
-                        //是其他协议，交给unity处理
+                        //通过Manager广播消息
                         if (_tcpServerManager == null)
                             throw new AppException( $"没有绑定控制器，无法发送客户端来的消息");
-                        _tcpServerManager.FromClientReceiveMsgCallBack(_msg.TargetToken,_msg.msg);
+                        _tcpServerManager.FromClientReceiveMsgCallBack(_msg);
                     }
                 }
                 catch (Exception ex)
