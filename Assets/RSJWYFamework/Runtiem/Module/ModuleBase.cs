@@ -16,10 +16,14 @@ namespace RSJWYFamework.Runtime
         {
         }
 
+        public virtual void LifePerSecondUpdateUnScaleTime()
+        {
+            
+        }
+
         public virtual void LifeFixedUpdate()
         {
         }
-
         public virtual void LifeLateUpdate()
         {
         }

@@ -252,20 +252,27 @@ namespace RSJWYFamework.Runtime
         
         #region 生命周期
         private float timer = 0f;
+        private float timerUnscaleTime = 0f;
 
         private void Update()
         {
-            timer += Time.unscaledDeltaTime;
+            timer += Time.deltaTime;
+            timerUnscaleTime+= Time.unscaledDeltaTime
+                ;
             SyncToActiveList();
             foreach (var life in Lifes)
             {
                 life.LifeUpdate();
-                if (timer >= 1f)
+            }
+            if (timer >= 1f)
+            {
+                foreach (var life in Lifes)
                 {
                     life.LifePerSecondUpdate();
-                    timer -= 1f; // 减去1秒，保留余数
                 }
+                timer -= 1f; // 减去1秒，保留余数
             }
+            
         }
 
         private void FixedUpdate()
@@ -276,7 +283,7 @@ namespace RSJWYFamework.Runtime
                 life.LifeFixedUpdate();
             }
         }
-
+        
         private void LateUpdate()
         {
             SyncToActiveList();

@@ -11,8 +11,16 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         int Priority { get; }
         void LifeUpdate();
+        /// <summary>
+        /// 受时间缩放影响
+        /// </summary>
         void LifePerSecondUpdate();
+        /// <summary>
+        /// 不受时间缩放影响
+        /// </summary>
+        void LifePerSecondUpdateUnScaleTime();
         void LifeFixedUpdate();
+        
         void LifeLateUpdate();
     }
 } 
