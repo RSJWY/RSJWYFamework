@@ -9,20 +9,20 @@ namespace RSJWYFamework.Runtime
     [Module]
     public class StateMachineManager:ModuleBase
     {
-        Dictionary<string,StateMachine>Procedures = new(100);
+        Dictionary<string,StateMachine>StateMachineDic = new(100);
         /// <summary>
         /// 添加一个流程控制器
         /// </summary>
         public void AddStateMachine(StateMachine stateMachine,bool isAutoRun=false) 
         {
             
-            if (Procedures.ContainsKey(stateMachine.st_Name))
+            if (StateMachineDic.ContainsKey(stateMachine.st_Name))
             {
                 AppLogger.Error($"添加流程失败：流程 {stateMachine.st_Name} 已存在！");
             }
             else
             {
-                Procedures.Add(stateMachine.st_Name,stateMachine);
+                StateMachineDic.Add(stateMachine.st_Name,stateMachine);
                 if (isAutoRun)
                 {
                     stateMachine.StartNode();
@@ -34,9 +34,9 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public void RemoveStateMachine(string st_Name) 
         {
-            if (Procedures.ContainsKey(st_Name))
+            if (StateMachineDic.ContainsKey(st_Name))
             {
-                Procedures.Remove(st_Name);
+                StateMachineDic.Remove(st_Name);
             }
         }
         /// <summary>
@@ -46,38 +46,46 @@ namespace RSJWYFamework.Runtime
         /// <returns></returns>
         public StateMachine GetStateMachine(string st_Name)
         {
-            if (Procedures.ContainsKey(st_Name))
+            if (StateMachineDic.ContainsKey(st_Name))
             {
-                return Procedures[st_Name];
+                return StateMachineDic[st_Name];
             }
             return null;
         }
         
         public override void Initialize()
         {
-            
+            StateMachineDic.Clear();
         }
 
         public override void Shutdown()
         {
+            StateMachineDic.Clear();
+        }
+
+
+        public override void LifeUpdate()
+        {
+            foreach (var _sm in StateMachineDic)
+            {
+                _sm.Value.OnUpdate();
+            }
         }
 
         public override void LifePerSecondUpdate()
         {
-            foreach (var procedure in Procedures)
+            foreach (var _sm in StateMachineDic)
             {
-                procedure.Value.OnUpdateSecond();
+                _sm.Value.OnUpdateSecond();
             }
         }
 
-        public override void LifeUpdate()
+        public override void LifePerSecondUpdateUnScaleTime()
         {
-            foreach (var procedure in Procedures)
+            foreach (var _sm in StateMachineDic)
             {
-                procedure.Value.OnUpdate();
+                _sm.Value.OnUpdateSecondUnScaleTime();
             }
         }
-
-      
     }
 }
