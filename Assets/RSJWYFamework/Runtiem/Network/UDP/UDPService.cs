@@ -19,6 +19,8 @@ namespace RSJWYFamework.Runtime
         /// 监听IP
         /// </summary>
         IPAddress _ip ;
+        
+         IPEndPoint ipendpoint;
         /// <summary>
         /// UDP Socket
         /// </summary>
@@ -91,7 +93,7 @@ namespace RSJWYFamework.Runtime
                 //支持广播消息
                 _udpClient.EnableBroadcast = true;
                 //配置监听
-                IPEndPoint ipendpoint = new IPEndPoint(_ip, _port);
+                ipendpoint = new IPEndPoint(_ip, _port);
                 _udpClient.Bind(ipendpoint);
                 _cts = new CancellationTokenSource();
                 //开启异步监听
@@ -113,6 +115,7 @@ namespace RSJWYFamework.Runtime
         {
             _read = new SocketAsyncEventArgs();
             _read.SetBuffer(new byte[1024*1024], 0, 1024*1024);
+            _read.RemoteEndPoint = ipendpoint;
             _read.Completed += IO_Completed; 
             
             _write = new SocketAsyncEventArgs();
