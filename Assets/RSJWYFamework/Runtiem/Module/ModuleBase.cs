@@ -10,7 +10,11 @@ namespace RSJWYFamework.Runtime
         public virtual int Priority => 99;
         public abstract void Initialize();
         public abstract void Shutdown();
-        public abstract void LifeUpdate();
+
+        public virtual void LifeUpdate()
+        {
+            
+        }
 
         public virtual void LifePerSecondUpdate()
         {

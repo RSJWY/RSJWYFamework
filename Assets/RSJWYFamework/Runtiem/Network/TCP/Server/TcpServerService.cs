@@ -58,7 +58,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息体加密接口
         /// </summary>
-        internal ISocketMsgBodyEncrypt  m_MsgBodyEncrypt;
+        internal ISocketMsgBodyEncrypt  _MsgBodyEncrypt;
         /// <summary>
         /// 监听端口
         /// </summary>
@@ -128,19 +128,21 @@ namespace RSJWYFamework.Runtime
 
         #region 初始化
 
-        internal TcpServerService(string ip, int port,TcpServerManager tcpServerManager, Guid handle)
+        internal TcpServerService(string ip, int port,TcpServerManager tcpServerManager, Guid handle,ISocketMsgBodyEncrypt msgBodyEncrypt)
         {
             this._ip = IPAddress.Parse(ip);
             port = port;
             _tcpServerManager = tcpServerManager;
             this._handle = handle;
+            this._MsgBodyEncrypt = msgBodyEncrypt;
         }
-        internal TcpServerService(IPAddress ipAddress, int port,TcpServerManager tcpServerManager, Guid handle)
+        internal TcpServerService(IPAddress ipAddress, int port,TcpServerManager tcpServerManager, Guid handle, ISocketMsgBodyEncrypt msgBodyEncrypt)
         {
             _ip = ipAddress;
             port = _port;
             _tcpServerManager = tcpServerManager;
             this._handle = handle;
+            this._MsgBodyEncrypt = msgBodyEncrypt;
         }
 
 
@@ -372,7 +374,7 @@ namespace RSJWYFamework.Runtime
                             readBuff.ReadIndex += 4; //前四位存储字节流数组长度信息
                             //在消息接收异步线程内同步处理消息，保证当前客户消息顺序性
                             //var _msgBase= MessageTool.DecodeMsg(readBuff.Bytes, readBuff.ReadIndex, msgLength);
-                            var decodeMsg= Utility.TCPSocketTool.DecodeMsg(readBuff.GetlengthBytes(msgLength),m_MsgBodyEncrypt);
+                            var decodeMsg= Utility.TCPSocketTool.DecodeMsg(readBuff.GetlengthBytes(msgLength),_MsgBodyEncrypt);
                             //创建消息容器，检查解析的是不是心跳包
                             if (decodeMsg.IsPingPong)
                             {
@@ -469,7 +471,7 @@ namespace RSJWYFamework.Runtime
                     return;//链接不存在或者未建立链接
                 }
                 //编码
-                var sendBytes = Utility.TCPSocketTool.EncodeMsg(msgBytes,m_MsgBodyEncrypt);
+                var sendBytes = Utility.TCPSocketTool.EncodeMsg(msgBytes,_MsgBodyEncrypt);
                 //创建容器
                 ServerToClientMsgContainer msg = new()
                 {

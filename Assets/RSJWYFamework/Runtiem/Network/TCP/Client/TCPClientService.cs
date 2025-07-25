@@ -166,6 +166,24 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         bool isInit = false;
         
+        
+        /// <summary>
+        /// 绑定的服务端控制器
+        /// </summary>
+        private TcpClientManager _tcpServerManager;
+        
+        /// <summary>
+        /// 服务句柄
+        /// </summary>
+        private Guid _handle;
+
+        public TcpClientService(string ip, int port, TcpClientManager tcpServerManager, Guid handle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        {
+            _ip = ip;
+            _port = port;
+            _tcpServerManager = tcpServerManager;
+            _handle = handle;
+        }
 
         #region 连接服务器
         

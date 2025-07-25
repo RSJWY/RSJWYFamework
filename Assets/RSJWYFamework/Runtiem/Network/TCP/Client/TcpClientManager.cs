@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using Cysharp.Threading.Tasks;
 
 namespace RSJWYFamework.Runtime
@@ -10,19 +11,57 @@ namespace RSJWYFamework.Runtime
     public class TcpClientManager : ModuleBase
     {
         private TcpClientService tcpsocket;
-        private bool reLock = false;
-
-        public void Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        private readonly ConcurrentDictionary<Guid, TcpClientService> tcpClientDic = new();
+        
+        
+        public override void Initialize()
         {
-            if (Utility.SocketTool.MatchIP(ip) && Utility.SocketTool.MatchPort(port))
+            ModuleManager.GetModule<EventManager>().BindEvent<ClientSendToServerEventArgs>(ClientSendToServerMsg);
+        }
+
+        public override void Shutdown()
+        { 
+            ModuleManager.GetModule<EventManager>().BindEvent<ClientSendToServerEventArgs>(ClientSendToServerMsg);
+            tcpsocket?.Quit();
+        }
+        /// <summary>
+        /// 客户端是否存在
+        /// </summary>
+        public bool IsExistServer(Guid serverHandle)
+        {
+            return tcpClientDic.ContainsKey(serverHandle);
+        }
+        
+        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        {
+            try
             {
-                tcpsocket=new TcpClientService();
-                tcpsocket.SocketTcpClientManager = this;
-                tcpsocket.m_MsgBodyEncrypt = socketMsgBodyEncrypt;
-                 tcpsocket.Connect();
+                if (!Utility.SocketTool.MatchIP(ip) || !Utility.SocketTool.MatchPort(port))
+                {
+                    AppLogger.Error($"无效的地址: {ip}:{port}");
+                    return Guid.Empty;
+                }
+                var handle = Guid.NewGuid();
+                var service = new TcpClientService(ip, port, this, handle, socketMsgBodyEncrypt);
+                service.Connect();
+                if (!tcpClientDic.TryAdd(handle,service))
+                {
+                    service.Close();
+                    AppLogger.Error($"Handle冲突: {handle}");
+                    return Guid.Empty;
+                }
+                return handle;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Bind失败: {ex.Message}");
+                return Guid.Empty;
             }
         }
 
+        /// <summary>
+        /// 向服务器发送消息
+        /// </summary>
         public void ClientSendToServerMsg(object sender, EventArgsBase eventArgsBase)
         {
             if (eventArgsBase is ClientSendToServerEventArgs args)
@@ -55,19 +94,6 @@ namespace RSJWYFamework.Runtime
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
-        public override void Initialize()
-        {
-            reLock = false;
-            ModuleManager.GetModule<EventManager>().BindEvent<ClientSendToServerEventArgs>(ClientSendToServerMsg);
-        }
-
-        public override void Shutdown()
-        { 
-            reLock = true;
-            ModuleManager.GetModule<EventManager>().BindEvent<ClientSendToServerEventArgs>(ClientSendToServerMsg);
-            tcpsocket?.Quit();
-        }
-
         public override void LifeUpdate()
         {
             tcpsocket?.TCPUpdate();
@@ -76,7 +102,7 @@ namespace RSJWYFamework.Runtime
         public override void LifePerSecondUpdate()
         {
 
-            if (tcpsocket?.Status==NetClientStatus.Close||tcpsocket?.Status==NetClientStatus.Fail&&reLock==false)
+            if (tcpsocket?.Status==NetClientStatus.Close||tcpsocket?.Status==NetClientStatus.Fail)
             {
                 AppLogger.Warning($"检测到服务器链接关闭，重新连接服务器");
                 tcpsocket.Connect();

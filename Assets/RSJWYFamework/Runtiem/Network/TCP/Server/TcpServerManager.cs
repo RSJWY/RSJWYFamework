@@ -31,6 +31,7 @@ namespace RSJWYFamework.Runtime
             ModuleManager.GetModule<EventManager>().UnBindEvent<SendMsgToServerAllClient>(SendMsgToServerAllClientEvent);
             CloseAllServer();
         }
+
         /// <summary>
         /// 服务端是否存在
         /// </summary>
@@ -60,7 +61,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="ip"></param>
         /// <param name="port"></param>
         /// <returns></returns>
-        public Guid Bind(string ip , int port)
+        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
         {
             try
             {
@@ -70,7 +71,7 @@ namespace RSJWYFamework.Runtime
                     return Guid.Empty;
                 }
                 var handle = Guid.NewGuid();
-                var service = new TcpServerService(ip, port, this, handle);
+                var service = new TcpServerService(ip, port, this, handle, socketMsgBodyEncrypt);
                 service.Bind();
                 if (!tcpServiceDic.TryAdd(handle,service))
                 {
@@ -86,10 +87,6 @@ namespace RSJWYFamework.Runtime
                 return Guid.Empty;
             }
         }
-        public override void LifeUpdate()
-        {
-        }
-        
         
         /// <summary>
         /// 接收广播所有消息事件
