@@ -47,22 +47,27 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 帧更新
         /// </summary>
-        /// <param name="time"></param>
-        /// <param name="realtime"></param>
         public void OnUpdate()
         {
             _currentProcedureBase?.OnUpdate();
         }
+        
         /// <summary>
         /// 秒更新
         /// </summary>
-        /// <param name="time"></param>
-        /// <param name="realtime"></param>
         public void OnUpdateSecond()
         {
             _currentProcedureBase?.OnUpdateSecond();
         }
         
+        /// <summary>
+        /// 秒更新
+        /// <remarks>不受时间缩放影响秒更新</remarks>
+        /// </summary>
+        public void OnUpdateSecondUnScaleTime()
+        {
+            _currentProcedureBase?.OnUpdateSecond();
+        }
         #region 黑板行为
         /// <summary>
         /// 设置黑板数据
