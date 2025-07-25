@@ -101,7 +101,7 @@ namespace RSJWYFamework.Runtime
         private Thread pingThread;
 
         /// <summary>
-        /// 通知多线程自己跳出
+        /// 收到消息处理线程-通知多线程自己跳出
         /// </summary>
         private CancellationTokenSource cts;
 
@@ -561,7 +561,6 @@ namespace RSJWYFamework.Runtime
         internal void CloseClientSocket(ClientSocketContainer clientContainer)
         {
             ClientDic.TryRemove(clientContainer.TokenID, out var _);
-                
             Interlocked.Decrement(ref m_clientCount);
             _tcpServerManager.CloseClientReCallBack(_handle,clientContainer.TokenID);
             clientContainer.Close();

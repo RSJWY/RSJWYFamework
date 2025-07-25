@@ -300,6 +300,11 @@ namespace RSJWYFamework.Runtime
         public void Close()
         {
             _cts?.Cancel();
+            lock (_msgSendThreadLock)
+            {
+                // 强制唤醒所有等待线程
+                Monitor.PulseAll(_msgSendThreadLock);
+            }
             _udpClient?.Close();
         }
 

@@ -683,8 +683,8 @@ namespace RSJWYFamework.Runtime
             _socket?.Close();
             lock (msgSendThreadLock)
             {
-                //释放锁，继续执行信息发送
-                Monitor.Pulse(msgSendThreadLock);
+                // 强制唤醒所有等待线程
+                Monitor.PulseAll(msgSendThreadLock);
             }
             Status = NetClientStatus.Close;
             AppLogger.Warning("连接关闭 Close Socket");

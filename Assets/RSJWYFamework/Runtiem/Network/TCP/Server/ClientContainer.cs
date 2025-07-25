@@ -76,7 +76,7 @@ namespace RSJWYFamework.Runtime
         internal Thread msgSendThread;
         
         /// <summary>
-        /// 消息发送线程
+        /// 心跳包线程
         /// </summary>
         internal Thread PingPongThread;
         
@@ -93,12 +93,12 @@ namespace RSJWYFamework.Runtime
         {
             try
             {
+                cts?.Cancel();
                 lock (msgSendThreadLock)
                 {
-                    //释放锁，继续执行信息发送
-                    Monitor.Pulse(msgSendThreadLock);
+                    //释放锁
+                    Monitor.PulseAll(msgSendThreadLock);
                 }
-                cts?.Cancel();
                 socket?.Shutdown(SocketShutdown.Both);
                 socket?.Close();
                 //本条数据发送完成，激活线程，继续处理下一条
