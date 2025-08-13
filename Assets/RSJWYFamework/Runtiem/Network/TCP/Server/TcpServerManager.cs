@@ -88,6 +88,19 @@ namespace RSJWYFamework.Runtime
             }
         }
         
+        public void UnBind(Guid serverHandle)
+        {
+            if (tcpServiceDic.TryGetValue(serverHandle, out var tcpServerService))
+            {
+                tcpServerService.CloseServer();
+                tcpServiceDic.TryRemove(serverHandle, out tcpServerService);
+            }
+            else
+            {
+                AppLogger.Error($"要关闭的服务端Handle不存在: {serverHandle}");
+            }
+        }
+        
         /// <summary>
         /// 接收广播所有消息事件
         /// </summary>
@@ -119,7 +132,6 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 向指定服务端的所有客户端广播消息
         /// </summary>
-        /// <param name="msgBase"></param>
         public void SendMsgToServerAllClient(byte[] msgBytes,Guid serverHandle)
         {
             if (tcpServiceDic.TryGetValue(serverHandle, out var service))
@@ -135,17 +147,15 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 向指定客户端发送消息
         /// </summary>
-        /// <param name="msgBase"></param>
-        /// <param name="clientSocketContainer"></param>
-        public void SendMsgToClient(TCPServertToClientMsg msgContainer)
+        public void SendMsgToClient(Guid serverHandle, Guid clientHandle,Guid MsgToken,byte[] data)
         {
-            if (tcpServiceDic.TryGetValue(msgContainer.ServerHandle,out var tcpServerService))
+            if (tcpServiceDic.TryGetValue(serverHandle,out var tcpServerService))
             {
-                tcpServerService?.SendMessage(msgContainer.data,msgContainer.ClientHandle,msgContainer.MsgToken);
+                tcpServerService?.SendMessage(data,clientHandle,MsgToken);
             }
             else
             {
-                AppLogger.Error($"服务端Handle不存在: {msgContainer.ServerHandle}");
+                AppLogger.Error($"服务端Handle不存在: {serverHandle}");
             }
         }
         
@@ -155,7 +165,7 @@ namespace RSJWYFamework.Runtime
         public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
         {
             if (eventArgsBase is ServerToClientMsgEventArgs args)
-                SendMsgToClient(args.msgContainer);
+                SendMsgToClient(args.ServerHandle, args.ClientHandle, args.MsgToken,args.data);
         }
         
         /// <summary>
@@ -163,12 +173,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public void ClientConnectedCallBack(Guid serverHandle,Guid clientHandle)
         {
-            var _event = new ServerClientConnectedCallBackEventArgs
-            {
-                Sender = this,
-                ServerHandle = serverHandle,
-                ClientHandle = clientHandle,
-            };
+            var _event = new ServerClientConnectedCallBackEventArgs(serverHandle, clientHandle);
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -177,12 +182,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public void CloseClientReCallBack(Guid serverHandle,Guid clientHandle)
         {
-            var _event = new ServerCloseClientCallBackEventArgs
-            {
-                Sender = this,
-                ServerHandle = serverHandle,
-                ClientHandle = clientHandle,
-            };
+            var _event = new ServerCloseClientCallBackEventArgs(serverHandle, clientHandle);
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -192,22 +192,24 @@ namespace RSJWYFamework.Runtime
         /// <param name="netServerStatus"></param>
         public void ServerServiceStatus(Guid serverHandle,NetServerStatus netServerStatus)
         {
-            var _event = new ServerStatusEventArgs
-            {
-                Sender = this,
-                ServerHandle = serverHandle,
-                status = netServerStatus
-            };
+            var _event = new ServerStatusEventArgs(serverHandle,netServerStatus);
+            
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
+        /// <summary>
+        /// 从客户端发来的消息
+        /// </summary>
+        /// <param name="msgContainer"></param>
         internal void FromClientReceiveMsgCallBack(TCPClientToServerMsg msgContainer)
         {
-            var _event= new FromClientReceiveMsgCallBackEventArgs
-            {
-                Sender = this,
-                msgContainer = msgContainer
-            };
+            var _event= new FromClientReceiveMsgCallBackEventArgs(
+                msgContainer.TCPServerHandle,
+                msgContainer.TCPClientHandle,
+                msgContainer.msgBytes,
+                msgContainer.Success,
+                msgContainer.Error
+                );
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 

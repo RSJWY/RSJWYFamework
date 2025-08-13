@@ -6,7 +6,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// UDP发送信息
     /// </summary>
-    public struct UDPSendMsg
+    public class UDPSendMsg
     {
         /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
@@ -30,7 +30,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// UDP发送信息执行完毕回调
     /// </summary>
-    public struct UDPSendCallBack
+    public class UDPSendCallBack
     {
         /// <summary>
         /// 是否发送成功
@@ -54,7 +54,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// UDP接收消息
     /// </summary>
-    public struct UDPReciveMsg
+    public class UDPReciveMsg
     {
         /// <summary>
         /// 接收是否成功

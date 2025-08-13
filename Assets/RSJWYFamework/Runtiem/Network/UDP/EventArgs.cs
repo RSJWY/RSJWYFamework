@@ -9,14 +9,14 @@ namespace RSJWYFamework.Runtime
     }
     public sealed class UDPSoketReciveMsgEventArgs: UDPSoketBaseEventArgs
     {
-        public UDPReciveMsg UDPReciveMsg;
+        public UDPReciveMsg UDPReciveMsg{get;internal set;}
     }
     public sealed class UDPSoketSendCallBackEventArgs: UDPSoketBaseEventArgs
     {
-        public UDPSendCallBack UDPSendCallBack;
+        public UDPSendCallBack UDPSendCallBack{get;internal set;}
     }
     public sealed class UDPSoketSendMsgEventArgs: UDPSoketBaseEventArgs
     {
-        public UDPSendMsg UDPSendMsg;
+        public UDPSendMsg UDPSendMsg{get;internal set;}
     }
 }

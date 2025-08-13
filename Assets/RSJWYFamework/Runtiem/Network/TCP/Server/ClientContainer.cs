@@ -142,7 +142,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     ///消息发送数据容器
     /// </summary>
-    internal class ServerToClientMsgContainer
+    internal struct ServerToClientMsgContainer
     {
         /// <summary>
         /// 消息目标服务器
@@ -163,7 +163,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// TCP服务器发送给客户端的消息
     /// </summary>
-    public struct TCPServertToClientMsg
+    public class TCPServertToClientMsg
     {
         /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
@@ -189,7 +189,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// TCP服务器发送给客户端的消息回调
     /// </summary>
-    public struct TCPServertToClientMsgCallBack
+    public class TCPServertToClientMsgCallBack
     {
         /// <summary>
         /// 是否发送成功
@@ -218,7 +218,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 服务器接收到的来自客户端消息容器
     /// </summary>
-    public struct TCPClientToServerMsg
+    public class TCPClientToServerMsg
     {
         /// <summary>
         /// 消息TCPServer Handle

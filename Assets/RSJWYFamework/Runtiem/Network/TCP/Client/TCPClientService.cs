@@ -63,7 +63,7 @@ namespace RSJWYFamework.Runtime
                 if (_status != value)
                 {
                     _status = value;
-                    SocketTcpClientManager?.ClientStatus(_status);
+                    SocketTcpClientManager?.ClientStatus(_status,ClientHandle);
                 }
             }
         }
@@ -129,17 +129,12 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息发送队列
         /// </summary>
-        ConcurrentQueue<ByteArrayMemory> m_WriteQueue;
+        ConcurrentQueue<SendClientToServerMsg> m_WriteQueue;
 
         /// <summary>
         /// 接收的MsgBase——要处理的消息
         /// </summary>
-        ConcurrentQueue<byte[]> msgQueue;
-
-        /// <summary>
-        /// 需要在Unity内处理的信息
-        /// </summary>
-        ConcurrentQueue<byte[]> unityMsgQueue = new ();
+        ConcurrentQueue<byte[]> FromServerMsgQueue;
         
         /// <summary>
         /// 接收数据
@@ -173,16 +168,16 @@ namespace RSJWYFamework.Runtime
         private TcpClientManager _tcpServerManager;
         
         /// <summary>
-        /// 服务句柄
+        /// 客户端服务句柄
         /// </summary>
-        private Guid _handle;
+        private Guid ClientHandle;
 
-        public TcpClientService(string ip, int port, TcpClientManager tcpServerManager, Guid handle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        public TcpClientService(string ip, int port, TcpClientManager tcpServerManager, Guid clientHandle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
         {
             _ip = ip;
             _port = port;
             _tcpServerManager = tcpServerManager;
-            _handle = handle;
+            ClientHandle = clientHandle;
         }
 
         #region 连接服务器
@@ -206,8 +201,8 @@ namespace RSJWYFamework.Runtime
             cts = new();
             _socket = new System.Net.Sockets.Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);//配置连接模式
             _readBuff = new ByteArrayMemory();//开信息收数组
-            m_WriteQueue = new ConcurrentQueue<ByteArrayMemory>();//消息发送队列
-            msgQueue = new();//接收消息处理队列（所有接收到要处理的消息
+            m_WriteQueue = new ConcurrentQueue<SendClientToServerMsg>();//消息发送队列
+            FromServerMsgQueue = new();//接收消息处理队列（所有接收到要处理的消息
             Status = NetClientStatus.None;
         }
 
@@ -291,7 +286,7 @@ namespace RSJWYFamework.Runtime
                     _WritesocketAsyncEventArgs.Completed += IO_Completed;
                 
                     //创建消息处理线程-后台处理
-                    m_msgThread = new Thread(() =>MsgThread(cts.Token));
+                    m_msgThread = new Thread(() =>FromMsgThread(cts.Token));
                     m_msgThread.IsBackground = true;//设置为后台可运行
                     m_msgThread.Start();//启动线程
                 
@@ -398,7 +393,7 @@ namespace RSJWYFamework.Runtime
                             else
                             {
                                 //处理消息
-                                msgQueue.Enqueue(_msgBase.msgBase);
+                                FromServerMsgQueue.Enqueue(_msgBase.msgBase);
                             }
                             //处理完后移动数据位
                             _readBuff.ReadIndex += msgLength;
@@ -438,22 +433,20 @@ namespace RSJWYFamework.Runtime
                 if (socketAsyncEventArgs.SocketError==SocketError.Success&&socketAsyncEventArgs.BytesTransferred > 0)
                 {
                     m_WriteQueue.TryPeek(out var ba);
-                    ba.ReadIndex += socketAsyncEventArgs.BytesTransferred; //记录已发送索引
-                    if (ba.Readable == 0)//代表发送完整
-                    {
-                        m_WriteQueue.TryDequeue(out var _bDelete);//取出但不使用，只为了从队列中移除
-                        ba = null;//发送完成，置空
-                    }
+                    ba.Data.ReadIndex += socketAsyncEventArgs.BytesTransferred; //记录已发送索引
                     //发送不完整，再次发送
-                    if (ba != null)
+                    if (ba.Data.Readable >0)
                     {
                         //重新获取可用数据切片作为发送数据
-                        socketAsyncEventArgs.SetBuffer(ba.GetRemainingSlices());
+                        socketAsyncEventArgs.SetBuffer(ba.Data.GetRemainingSlices());
                         if (!_socket.SendAsync(socketAsyncEventArgs))
                             Task.Run(() => ProcessSend(socketAsyncEventArgs));
                     }
                     else
                     {
+                        m_WriteQueue.TryDequeue(out var _bDelete);//取出但不使用，只为了从队列中移除
+                        SocketTcpClientManager.ClientSendToServerMsgCompleteCallBack(ClientHandle,ba.MsgToken);
+                        ba = null;//发送完成，置空
                         //本条数据发送完成，激活线程，继续处理下一条
                         lock (msgSendThreadLock)
                         {
@@ -480,23 +473,25 @@ namespace RSJWYFamework.Runtime
         /// 发送信息到服务器
         /// </summary>
         /// <param name="msgBase"></param>
-        internal void SendMessage(byte[] msgBase)
+        internal void SendMessage(byte[] msgBase,Guid msgToken)
         {
             if (_socket == null || !_socket.Connected)
             {
-                AppLogger.Warning("没有连接到服务器");
+                AppLogger.Warning($"{ClientHandle}：没有连接到服务器");
                 return;//链接不存在或者未建立链接
             }
             //写入数据
             try
             {
                 ByteArrayMemory sendOldBytes = Utility.TCPSocketTool.EncodeMsg(msgBase,m_MsgBodyEncrypt);
+                sendOldBytes.WriteIndex = 0;
+                var sendToServerMsg = new SendClientToServerMsg(sendOldBytes,msgToken);
                 //写入到队列，向服务器发送消息
-                m_WriteQueue.Enqueue(sendOldBytes);//放入队列
+                m_WriteQueue.Enqueue(sendToServerMsg);//放入队列
             }
             catch (SocketException ex)
             {
-                AppLogger.Error($"向服务器发送消息失败 SendMessage Error:{ex.ToString()}");
+                AppLogger.Error($"{ClientHandle}:向服务器发送消息失败 SendMessage Error:{ex.ToString()}");
                 Close();
             }
         }
@@ -507,13 +502,13 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息处理线程回调
         /// </summary>
-        void MsgThread(CancellationToken token)
+        void FromMsgThread(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    if (msgQueue.Count <= 0)
+                    if (FromServerMsgQueue.Count <= 0)
                     {
                         Thread.Sleep(10);
                         continue; //当前无消息，跳过进行下一次排查处理
@@ -522,7 +517,7 @@ namespace RSJWYFamework.Runtime
                     //有待处理的消息
                     byte[] msgBase = null;
                     //取出并移除取出来的数据
-                    if (!msgQueue.TryDequeue(out msgBase))
+                    if (!FromServerMsgQueue.TryDequeue(out msgBase))
                     {
                         AppLogger.Error( "客户端消息：非正常错误！取出并处理消息队列失败！！");
                         continue;
@@ -532,7 +527,8 @@ namespace RSJWYFamework.Runtime
                     if (msgBase != null)
                     {
                         //其他消息交给unity消息队列处理
-                        unityMsgQueue.Enqueue(msgBase);
+                        //unityMsgQueue.Enqueue(msgBase);
+                        SocketTcpClientManager.ReceiveFromServerMsgCallBack(msgBase,ClientHandle);
                     }
                 }
                 catch (SocketException ex)
@@ -569,7 +565,9 @@ namespace RSJWYFamework.Runtime
                         //规定时间到，发送心跳包到服务器
                         AppLogger.Log($"<color=green>向服务器发送心跳包</color>");
                         lastPingTime = timeNow;
-                        m_WriteQueue.Enqueue(Utility.TCPSocketTool.SendPingPong());//放入队列
+                        //发送心跳包
+                        var sendToServerMsg = new SendClientToServerMsg(Utility.TCPSocketTool.SendPingPong(),Guid.NewGuid());
+                        m_WriteQueue.Enqueue(sendToServerMsg);
                     }
                     //如果心跳包过长时间没收到，关闭链接
                     if (timeNow - lastPongTime > m_PingInterval * 12)
@@ -606,9 +604,9 @@ namespace RSJWYFamework.Runtime
 
                     //队列里有消息等待发送
                     //取出消息队列内的消息，但不移除队列，以获取目标客户端
-                    m_WriteQueue.TryPeek(out var sendByte);
+                    m_WriteQueue.TryPeek(out var sendMsg);
                     //当前线程执行休眠，等待消息发送完成后继续
-                    _WritesocketAsyncEventArgs.SetBuffer(sendByte.GetRemainingSlices());
+                    _WritesocketAsyncEventArgs.SetBuffer(sendMsg.Data.GetRemainingSlices());
                     lock (msgSendThreadLock)
                     {
                         if (!_socket.SendAsync( _WritesocketAsyncEventArgs))
@@ -634,44 +632,6 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        #endregion
-
-        #region Unity主线程调用
-
-        /// <summary>
-        /// 需要Unity处理的内容
-        /// </summary>
-        internal void TCPUpdate()
-        {
-            if (!isInit)
-            {
-                return;
-            }
-            //处理unity该处理的消息
-            if (_socket != null && _socket.Connected)
-            {
-                if (unityMsgQueue.Count <= 0)
-                {
-                    return;//没有消息
-                }
-                //取出消息
-                if (unityMsgQueue.Count > 0)
-                {
-                    byte[] msgBase = null;
-                    //取出并移除数据
-                    if (unityMsgQueue.TryDequeue(out msgBase))
-                    {
-                        SocketTcpClientManager.ReceiveMsgCallBack(msgBase);
-                    }
-                    else
-                    {
-                        AppLogger.Error("非正常错误！客户端在处理返回给unity处理的信息时，取出并处理消息队列失败！！");
-                    }
-
-                }
-            }
-            
-        }
         #endregion
 
         #region 关闭连接
