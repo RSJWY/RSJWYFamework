@@ -130,19 +130,19 @@ namespace RSJWYFamework.Runtime
 
         internal TcpServerService(string ip, int port,TcpServerManager tcpServerManager, Guid handle,ISocketMsgBodyEncrypt msgBodyEncrypt)
         {
-            this._ip = IPAddress.Parse(ip);
-            port = port;
+            _ip = IPAddress.Parse(ip);
+            _port = port;
             _tcpServerManager = tcpServerManager;
-            this._handle = handle;
-            this._MsgBodyEncrypt = msgBodyEncrypt;
+            _handle = handle;
+            _MsgBodyEncrypt = msgBodyEncrypt;
         }
         internal TcpServerService(IPAddress ipAddress, int port,TcpServerManager tcpServerManager, Guid handle, ISocketMsgBodyEncrypt msgBodyEncrypt)
         {
             _ip = ipAddress;
-            port = _port;
+            _port = port;
             _tcpServerManager = tcpServerManager;
-            this._handle = handle;
-            this._MsgBodyEncrypt = msgBodyEncrypt;
+            _handle = handle;
+            _MsgBodyEncrypt = msgBodyEncrypt;
         }
 
 
@@ -261,7 +261,7 @@ namespace RSJWYFamework.Runtime
                 //创建并存储客户端信息
                 var clientToken = new ClientSocketContainer
                 {
-                    lastPingTime = Utility.Timestamp.UnixTimestampMilliseconds,
+                    lastPingTime = Utility.Timestamp.UnixTimestampSeconds,
                     socket = socketAsyncEArgs.AcceptSocket,
                     ReadBuff = new(),
                     readSocketAsyncEA = RWSocketAsynEA.Get(),
@@ -271,7 +271,7 @@ namespace RSJWYFamework.Runtime
                     IPAddress = ((IPEndPoint)(socketAsyncEArgs.AcceptSocket.RemoteEndPoint)).Address,
                     sendQueue = new(),
                     cts = new(),
-                    msgSendThreadLock = new(),
+                    msgSendDoneEvent =  new ManualResetEventSlim(false),
                     ServerService=this,
                     TokenID = Guid.NewGuid(),
                 };
@@ -368,6 +368,10 @@ namespace RSJWYFamework.Runtime
                                 //扩容后，retun，继续接收
                                 readBuff.MoveBytes(); //已经完成一轮解析，移动数据
                                 readBuff.ReSize(msgLength + 8); //扩容，扩容的同时，保证长度信息也能被存入
+                                
+                                // 注意要再次绑定监听再离开以继续接收
+                                if (!token.socket.ReceiveAsync(socketAsyncEA))
+                                    Task.Run(() => ProcessReceive(socketAsyncEA));
                                 return;
                             }
                             //移动，规避长度位，从整体消息开始位接收数据
@@ -379,8 +383,8 @@ namespace RSJWYFamework.Runtime
                             if (decodeMsg.IsPingPong)
                             {
                                 //刷新心跳时间
-                                token.lastPingTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                                AppLogger.Log($"<color=blue>服务器向客户端{token.Remote}返回心跳包</color>");
+                                token.lastPingTime = Utility.Timestamp.UnixTimestampSeconds;
+                                AppLogger.Log($"<color=blue>接收到客户端{token.Remote}心跳包，返回心跳包</color>");
                                 //生成心跳包返回给客户端
                                 ServerToClientMsgContainer pingpongMsg = new()
                                 {
@@ -545,11 +549,8 @@ namespace RSJWYFamework.Runtime
             {
                 //无论状态如何，释放线程
                 //本条数据发送完成，激活线程，继续处理下一条
-                lock (clientToken.msgSendThreadLock)
-                {
-                    //释放锁，继续执行信息发送
-                    Monitor.Pulse(clientToken.msgSendThreadLock);
-                }
+                clientToken.msgSendDoneEvent.Set();
+                
 
             }
         }  
@@ -626,13 +627,11 @@ namespace RSJWYFamework.Runtime
                     var data = _msgbase.SendBytes.GetRemainingSlices();
                     _msgbase.TargetContainer.writeSocketAsyncEA.SetBuffer(data);
                     //当前线程执行休眠，等待消息发送完成后继续
-                    lock (clientSocketContainer.msgSendThreadLock)
-                    {
-                        if (!_msgbase.TargetContainer.socket.SendAsync( _msgbase.TargetContainer.writeSocketAsyncEA))
-                            Task.Run(()=>ProcessSend(_msgbase.TargetContainer.writeSocketAsyncEA));
-                        //等待SendCallBack完成回调释放本锁再继续执行，超时10秒
-                        Monitor.Wait(clientSocketContainer.msgSendThreadLock);
-                    }
+                    clientSocketContainer.msgSendDoneEvent.Reset();
+                    if (!_msgbase.TargetContainer.socket.SendAsync( _msgbase.TargetContainer.writeSocketAsyncEA))
+                        Task.Run(()=>ProcessSend(_msgbase.TargetContainer.writeSocketAsyncEA));
+                    //等待SendCallBack完成回调释放本锁再继续执行，超时10秒
+                    clientSocketContainer.msgSendDoneEvent.Wait(TimeSpan.FromSeconds(20));
                 }
                 catch (Exception ex)
                 {

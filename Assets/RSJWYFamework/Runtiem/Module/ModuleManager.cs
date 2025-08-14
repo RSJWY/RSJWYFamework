@@ -293,6 +293,14 @@ namespace RSJWYFamework.Runtime
             }
         }
 
+        private void OnApplicationQuit()
+        {
+            foreach (var module in Modules)
+            {
+                module.Value.Shutdown();
+            }
+        }
+
         #endregion
     }
 }

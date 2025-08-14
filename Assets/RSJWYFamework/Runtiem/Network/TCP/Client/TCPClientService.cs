@@ -63,15 +63,11 @@ namespace RSJWYFamework.Runtime
                 if (_status != value)
                 {
                     _status = value;
-                    SocketTcpClientManager?.ClientStatus(_status,ClientHandle);
+                    SocketTcpClientManager.ClientStatus(_status,ClientHandle);
                 }
             }
         }
-
-        /// <summary>
-        /// 绑定的客户端控制器，便于回调
-        /// </summary>
-        internal TcpClientManager SocketTcpClientManager;
+        
         
         /// <summary>
         /// 消息体加解接口
@@ -110,7 +106,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         ///  消息队列发送锁
         /// </summary>
-        object msgSendThreadLock = new object();
+        ManualResetEventSlim msgSendDoneEvent = new ManualResetEventSlim(false);
 
         /// <summary>
         /// 最后一次发送心跳包时间
@@ -157,26 +153,20 @@ namespace RSJWYFamework.Runtime
         private static CancellationTokenSource cts;
 
         /// <summary>
-        /// 是否已经初始化
+        /// 绑定的客户端控制器，便于回调
         /// </summary>
-        bool isInit = false;
-        
-        
-        /// <summary>
-        /// 绑定的服务端控制器
-        /// </summary>
-        private TcpClientManager _tcpServerManager;
+        internal TcpClientManager SocketTcpClientManager;
         
         /// <summary>
         /// 客户端服务句柄
         /// </summary>
         private Guid ClientHandle;
 
-        public TcpClientService(string ip, int port, TcpClientManager tcpServerManager, Guid clientHandle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        public TcpClientService(string ip, int port, TcpClientManager socketTcpClientManager, Guid clientHandle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
         {
             _ip = ip;
             _port = port;
-            _tcpServerManager = tcpServerManager;
+            SocketTcpClientManager = socketTcpClientManager;
             ClientHandle = clientHandle;
         }
 
@@ -184,11 +174,8 @@ namespace RSJWYFamework.Runtime
         
         public void Connect()
         {
-            if (!isInit)
-            {
-                return;
-            }
             Connect(_ip, _port);
+           
         }
         
         
@@ -224,8 +211,6 @@ namespace RSJWYFamework.Runtime
             InitState();//初始
             _socket.NoDelay = true;//没有延时，写入数据时立即发送
             
-            //存储初始设置的信息，用于重连
-            isInit = true;
             //执行连接
             StartAConnect(null);
         }
@@ -258,7 +243,7 @@ namespace RSJWYFamework.Runtime
             }
             catch (Exception e)
             {
-                Status = NetClientStatus.Fail;
+                Status = NetClientStatus.ConnectFail;
                 AppLogger.Error($" StartAConnect 连接服务器时发生异常，疑似\n {e}");
             }
         }
@@ -276,8 +261,8 @@ namespace RSJWYFamework.Runtime
                     _WritesocketAsyncEventArgs=new SocketAsyncEventArgs();
                 
                     //心跳包时间初始化
-                    lastPingTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                    lastPongTime =  Utility.Timestamp.UnixTimestampMilliseconds;
+                    lastPingTime = Utility.Timestamp.UnixTimestampSeconds;
+                    lastPongTime =  Utility.Timestamp.UnixTimestampSeconds;
 
                     //配置socketAsyncEArgs
                     //注意！！！count参数必须设置！
@@ -309,13 +294,13 @@ namespace RSJWYFamework.Runtime
                 }
                 else
                 {
-                    Status = NetClientStatus.Fail;
+                    Status = NetClientStatus.ConnectFail;
                     AppLogger.Warning($"ProcessConnect 未能和服务器完成链接，SocketError：{socketAsyncEArgs.SocketError}");
                 }
             }
             catch (Exception ex)
             {
-                Status = NetClientStatus.Fail;
+                Status = NetClientStatus.ConnectFail;
                 AppLogger.Warning($"ProcessConnect 处理连接后回调错误:{ex.ToString()}");
             }
         }
@@ -376,6 +361,9 @@ namespace RSJWYFamework.Runtime
                                 //扩容后，retun，继续接收
                                 _readBuff.MoveBytes(); //已经完成一轮解析，移动数据
                                 _readBuff.ReSize(msgLength + 8); //扩容，扩容的同时，保证长度信息也能被存入
+                                // 注意要再次绑定监听再离开以继续接收
+                                if (!_socket.ReceiveAsync(socketAsyncEventArgs))
+                                    Task.Run(() => ProcessReceive(socketAsyncEventArgs));
                                 return;
                             }
 
@@ -387,7 +375,7 @@ namespace RSJWYFamework.Runtime
                             {
                                 //写心跳信息
                                 //更新接收到的心跳包时间（后台运行）
-                                lastPongTime = Utility.Timestamp.UnixTimestampMilliseconds;
+                                lastPongTime = Utility.Timestamp.UnixTimestampSeconds;
                                 AppLogger.Log($"<color=blue>接收到服务器心跳包</color>");
                             }
                             else
@@ -448,11 +436,9 @@ namespace RSJWYFamework.Runtime
                         SocketTcpClientManager.ClientSendToServerMsgCompleteCallBack(ClientHandle,ba.MsgToken);
                         ba = null;//发送完成，置空
                         //本条数据发送完成，激活线程，继续处理下一条
-                        lock (msgSendThreadLock)
-                        {
-                            //释放锁，继续执行信息发送
-                            Monitor.Pulse(msgSendThreadLock);
-                        }
+                        
+                        // 🔔 唤醒发送线程
+                        msgSendDoneEvent.Set();
 
                     }
                 }
@@ -559,7 +545,7 @@ namespace RSJWYFamework.Runtime
                         continue;
                     }
 
-                    long timeNow = Utility.Timestamp.UnixTimestampMilliseconds;
+                    long timeNow = Utility.Timestamp.UnixTimestampSeconds;
                     if (timeNow - lastPingTime > m_PingInterval)
                     {
                         //规定时间到，发送心跳包到服务器
@@ -572,8 +558,8 @@ namespace RSJWYFamework.Runtime
                     //如果心跳包过长时间没收到，关闭链接
                     if (timeNow - lastPongTime > m_PingInterval * 12)
                     {
-                        Close();
                         AppLogger.Warning("服务器返回心跳包超时");
+                        Close();
                     }
                 }
                 catch (SocketException ex)
@@ -607,17 +593,17 @@ namespace RSJWYFamework.Runtime
                     m_WriteQueue.TryPeek(out var sendMsg);
                     //当前线程执行休眠，等待消息发送完成后继续
                     _WritesocketAsyncEventArgs.SetBuffer(sendMsg.Data.GetRemainingSlices());
-                    lock (msgSendThreadLock)
+                    msgSendDoneEvent.Reset(); // 🔁 先重置等待状态
+                    
+                    if (!_socket.SendAsync( _WritesocketAsyncEventArgs))
+                        Task.Run(()=>ProcessSend(_WritesocketAsyncEventArgs));
+                    // 🕒 等待发送完成，支持超时（可选）
+                    msgSendDoneEvent.Wait(TimeSpan.FromSeconds(20));
+                    
+                    if (token.IsCancellationRequested)
                     {
-                        if (!_socket.SendAsync( _WritesocketAsyncEventArgs))
-                            Task.Run(()=>ProcessSend(_WritesocketAsyncEventArgs));
-                        //等待SendCallBack完成回调释放本锁再继续执行，超时20秒
-                        Monitor.Wait(msgSendThreadLock);
-                        if (token.IsCancellationRequested)
-                        {
-                            AppLogger.Warning( $"请求取消任务");
-                            break;
-                        }
+                        AppLogger.Warning( $"请求取消任务");
+                        break;
                     }
                 }
                 catch (SocketException ex)
@@ -659,20 +645,18 @@ namespace RSJWYFamework.Runtime
         {
             cts?.Cancel();
             _socket?.Close();
-            lock (msgSendThreadLock)
+            // 🔔 唤醒发送线程
+            msgSendDoneEvent.Set();
+            /*lock (msgSendThreadLock)
             {
                 // 强制唤醒所有等待线程
                 Monitor.PulseAll(msgSendThreadLock);
-            }
+            }*/
             Status = NetClientStatus.Close;
             AppLogger.Warning("连接关闭 Close Socket");
         }
         internal void Quit()
         {
-            if (!isInit)
-            {
-                return;
-            }
             Close();
         }
         #endregion
@@ -681,13 +665,12 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 重新链接服务器
         /// </summary>
-        void ReConnectToServer()
-        {
-            if (!isInit)
-            {
-                return;
+        public void ReConnectToServer()
+        { 
+            if (Status==NetClientStatus.ConnectFail)
+            { 
+                Connect();
             }
-
         }
         #endregion
     }

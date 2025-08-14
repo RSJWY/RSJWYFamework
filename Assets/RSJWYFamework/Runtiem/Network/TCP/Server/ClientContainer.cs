@@ -79,11 +79,11 @@ namespace RSJWYFamework.Runtime
         /// 心跳包线程
         /// </summary>
         internal Thread PingPongThread;
-        
+
         /// <summary>
         /// 消息队列发送锁
         /// </summary>
-        internal object msgSendThreadLock ;
+        internal ManualResetEventSlim msgSendDoneEvent;
 
         
         /// <summary>
@@ -94,11 +94,7 @@ namespace RSJWYFamework.Runtime
             try
             {
                 cts?.Cancel();
-                lock (msgSendThreadLock)
-                {
-                    //释放锁
-                    Monitor.PulseAll(msgSendThreadLock);
-                }
+                msgSendDoneEvent.Set();
                 socket?.Shutdown(SocketShutdown.Both);
                 socket?.Close();
                 //本条数据发送完成，激活线程，继续处理下一条
@@ -120,7 +116,7 @@ namespace RSJWYFamework.Runtime
                     Thread.Sleep(1000);//本线程可以每秒检测一次
                     //检测心跳包是否超时的计算
                     //获取当前时间
-                    long timeNow = Utility.Timestamp.UnixTimestampMilliseconds;
+                    long timeNow = Utility.Timestamp.UnixTimestampSeconds;
                     if (timeNow-lastPingTime>ServerService.pingInterval*4)
                     {
                         ServerService.CloseClientSocket(this);

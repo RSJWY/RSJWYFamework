@@ -42,7 +42,8 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         ///  消息队列发送锁
         /// </summary>
-        object _msgSendThreadLock = new object();
+        
+        ManualResetEventSlim msgSendDoneEvent = new ManualResetEventSlim(false);
         /// <summary>
         /// 通知多线程自己跳出
         /// </summary>
@@ -221,10 +222,7 @@ namespace RSJWYFamework.Runtime
         {
             //不管是否发送成功，都从队列移除，并通知线程继续发送下一个消息
             _SendMsgQueue.TryDequeue(out var _msg);
-            lock (_msgSendThreadLock)
-            {
-                Monitor.Pulse(_msgSendThreadLock);
-            }
+            msgSendDoneEvent.Set();
             // 处理发送完成的逻辑
             if (e.SocketError == SocketError.Success)
             {
@@ -272,13 +270,10 @@ namespace RSJWYFamework.Runtime
                     //绑定消息
                     _write.SetBuffer(_data.data, 0, _data.data.Length);
                     _write.RemoteEndPoint = _data.remoteEndPoint;
-                    lock (_msgSendThreadLock)
-                    {
-                        //发送数据，并且让当前线程进入等待状态，等待当前数据发送完成后，再继续取出数据。
-                        if (!_udpClient.SendToAsync(_write))
-                            Task.Run(() => ProcessSend(_write));
-                        Monitor.Wait(_msgSendThreadLock);
-                    }
+                    msgSendDoneEvent.Reset();
+                    if (!_udpClient.SendToAsync(_write))
+                        Task.Run(() => ProcessSend(_write));
+                    msgSendDoneEvent.Wait(TimeSpan.FromSeconds(20));
                 }
                 catch (Exception e)
                 {
@@ -300,11 +295,7 @@ namespace RSJWYFamework.Runtime
         public void Close()
         {
             _cts?.Cancel();
-            lock (_msgSendThreadLock)
-            {
-                // 强制唤醒所有等待线程
-                Monitor.PulseAll(_msgSendThreadLock);
-            }
+            msgSendDoneEvent.Set();
             _udpClient?.Close();
         }
 

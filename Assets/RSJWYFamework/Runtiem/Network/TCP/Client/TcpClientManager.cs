@@ -147,10 +147,10 @@ namespace RSJWYFamework.Runtime
         {
             foreach (var item in tcpClientDic)
             {
-                if (item.Value?.Status==NetClientStatus.Close||item.Value?.Status==NetClientStatus.Fail)
+                if (item.Value?.Status==NetClientStatus.Close||item.Value?.Status==NetClientStatus.Fail||item.Value?.Status==NetClientStatus.ConnectFail)
                 {
                     AppLogger.Warning($"检测到服务器链接关闭，重新连接服务器");
-                    item.Value.Connect();
+                    item.Value.ReConnectToServer();
                 }
             }
         }
