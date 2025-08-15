@@ -6,9 +6,14 @@ namespace Script.Test
 {
     public class TestTCPServer: MonoBehaviour
     {
-        private void Start()
+        public Guid socketHandle;
+        private void OnEnable()
         {
-            ModuleManager.GetModule<TcpClientManager>().Bind("127.0.0.1", 2000,null);
+            socketHandle= ModuleManager.GetModule<TcpServerManager>().Bind("127.0.0.1", 2000,null);
+        }
+        private void OnDisable()
+        {
+            ModuleManager.GetModule<TcpServerManager>().UnBind(socketHandle);
         }
     }
 }

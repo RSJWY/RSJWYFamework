@@ -339,6 +339,8 @@ namespace RSJWYFamework.Runtime
             }
             try
             {
+                //主要是满足BytesTransferred>0时，
+                //SocketError.Success && socketAsyncEventArgs.BytesTransferred == 0是服务器主动调用断开
                 if (socketAsyncEventArgs.SocketError == SocketError.Success && socketAsyncEventArgs.BytesTransferred > 0)
                 {
                     //首先判断客户端token缓冲区剩余空间是否支持数据拷贝
@@ -396,7 +398,8 @@ namespace RSJWYFamework.Runtime
                 }
                 else
                 {
-                    AppLogger.Warning($"ProcessReceive 接收服务器消息失败：socketError：{socketAsyncEventArgs.SocketError},");
+                    //
+                    AppLogger.Warning($"ProcessReceive 接收服务器消息失败：SocketError：{socketAsyncEventArgs.SocketError},Socket BytesTransferred:{socketAsyncEventArgs.BytesTransferred},");
                     Status = NetClientStatus.Disconnect;
                     Close();
                     //服务器关闭链接
@@ -667,7 +670,10 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public void ReConnectToServer()
         { 
-            if (Status==NetClientStatus.ConnectFail)
+            if (Status==NetClientStatus.ConnectFail
+                ||Status==NetClientStatus.Disconnect
+                ||Status==NetClientStatus.Close
+                ||Status==NetClientStatus.Closing)
             { 
                 Connect();
             }

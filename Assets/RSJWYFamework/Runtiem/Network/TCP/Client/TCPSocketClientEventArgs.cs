@@ -14,12 +14,19 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public sealed class TCPClientStatusEventArgs : EventArgsBase
     {
+        /// <summary>
+        /// 客户端状态
+        /// </summary>
         public NetClientStatus NetClientStatus { get; private set; }
         /// <summary>
         /// 客户端服务句柄
         /// </summary>
         public Guid ClientHandle{ get; private set; }
-
+        /// <summary>
+        /// 客户端状态消息
+        /// </summary>
+        /// <param name="netClientStatus">客户端状态</param>
+        /// <param name="clientHandle">客户端服务句柄</param>
         public TCPClientStatusEventArgs(NetClientStatus netClientStatus, Guid clientHandle)
         {
             NetClientStatus = netClientStatus;
