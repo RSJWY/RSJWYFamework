@@ -43,12 +43,13 @@ namespace RSJWYFamework.Runtime
         /// 创建池
         /// 创建时，如果初始数量大于最大数量，将以最大数量来初始化（取这两值最小值）
         /// </summary>
-        /// <param name="limit">最大数量限制</param>
-        /// <param name="initCount">初始化数量</param>
         /// <param name="onCreate">创建时执行的事件</param>
         /// <param name="onDestroy">销毁时执行的事件</param>
         /// <param name="onGet">获取时执行的事件</param>
         /// <param name="onRelease">回收物体时执行的回调</param>
+        /// <param name="limit">最大数量限制</param>
+        /// <param name="initCount">初始化数量</param>
+        /// 
         public ObjectPool(Action<T> onCreate,Action<T> onDestroy,Action<T> onGet,Action<T> onRelease,
             int limit,int initCount)
         {

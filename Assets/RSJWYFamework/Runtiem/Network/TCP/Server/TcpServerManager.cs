@@ -53,15 +53,19 @@ namespace RSJWYFamework.Runtime
             return false;
         }
 
-        
-       
         /// <summary>
         /// 启动一个新的服务端
         /// </summary>
         /// <param name="ip"></param>
         /// <param name="port"></param>
-        /// <returns></returns>
-        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        /// <param name="socketMsgBodyEncrypt">消息体加解密服务，为空则不对消息加解密</param>
+        /// <param name="isDebugPingPong">是否开启调试心跳包</param>
+        /// <param name="bufferSize">数据缓冲区大小</param>
+        /// <param name="limit">对象池大小</param>
+        /// <param name="initCount">初始化对象数量</param>
+        /// <returns>服务端Handle</returns>
+        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt,
+            bool isDebugPingPong = false,int bufferSize = 10485760,int limit = 100,int initCount = 10)
         {
             try
             {
@@ -71,7 +75,10 @@ namespace RSJWYFamework.Runtime
                     return Guid.Empty;
                 }
                 var handle = Guid.NewGuid();
-                var service = new TcpServerService(ip, port, this, handle, socketMsgBodyEncrypt);
+                var service = new TcpServerService(
+                    ip, port, this, handle, 
+                    socketMsgBodyEncrypt,true
+                    ,bufferSize,limit,initCount);
                 service.Bind();
                 if (!tcpServiceDic.TryAdd(handle,service))
                 {
@@ -98,6 +105,28 @@ namespace RSJWYFamework.Runtime
             else
             {
                 AppLogger.Error($"要关闭的服务端Handle不存在: {serverHandle}");
+            }
+        }
+        /// <summary>
+        /// 关闭指定服务端
+        /// </summary>
+        /// <param name="serverHandle"></param>
+        void CloseServer(Guid serverHandle)
+        {
+            if (tcpServiceDic.TryGetValue(serverHandle, out var tcpServerService))
+            {
+                tcpServerService.CloseServer();
+                tcpServiceDic.TryRemove(serverHandle, out tcpServerService);
+            }
+        }
+        /// <summary>
+        /// 关闭所有服务端
+        /// </summary>
+        void CloseAllServer()
+        {
+            foreach (var server in tcpServiceDic)
+            {
+                server.Value.CloseServer();
             }
         }
         
@@ -144,8 +173,17 @@ namespace RSJWYFamework.Runtime
             }
         }
         
+        
         /// <summary>
-        /// 向指定客户端发送消息
+        /// 接收发送消息事件
+        /// </summary>
+        public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
+        {
+            if (eventArgsBase is ServerToClientMsgEventArgs args)
+                SendMsgToClient(args.ServerHandle, args.ClientHandle, args.MsgToken,args.data);
+        }
+        /// <summary>
+        /// 指定服务端指定客户端发送消息
         /// </summary>
         public void SendMsgToClient(Guid serverHandle, Guid clientHandle,Guid MsgToken,byte[] data)
         {
@@ -157,15 +195,6 @@ namespace RSJWYFamework.Runtime
             {
                 AppLogger.Error($"服务端Handle不存在: {serverHandle}");
             }
-        }
-        
-        /// <summary>
-        /// 接收发送消息事件
-        /// </summary>
-        public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
-        {
-            if (eventArgsBase is ServerToClientMsgEventArgs args)
-                SendMsgToClient(args.ServerHandle, args.ClientHandle, args.MsgToken,args.data);
         }
         
         /// <summary>
@@ -198,9 +227,11 @@ namespace RSJWYFamework.Runtime
         }
 
         /// <summary>
-        /// 从客户端发来的消息
+        /// 从客户端发来的消息回调
         /// </summary>
-        /// <param name="msgContainer"></param>
+        /// <remarks>
+        /// 注意！！本函数从消息处理线程调用，注意多线程问题！
+        /// </remarks>
         internal void FromClientReceiveMsgCallBack(TCPClientToServerMsg msgContainer)
         {
             var _event= new FromClientReceiveMsgCallBackEventArgs(
@@ -212,28 +243,17 @@ namespace RSJWYFamework.Runtime
                 );
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
-
+        
         /// <summary>
-        /// 关闭指定服务端
+        /// 向客户端发送消息完成回调
         /// </summary>
-        /// <param name="serverHandle"></param>
-        void CloseServer(Guid serverHandle)
+        /// <remarks>
+        /// 注意！！本函数从消息处理线程调用，注意多线程问题！
+        /// </remarks>
+        internal void SendMsgToClientCallBack(TCPServertToClientMsgCallBack  msgContainer)
         {
-            if (tcpServiceDic.TryGetValue(serverHandle, out var tcpServerService))
-            {
-                tcpServerService.CloseServer();
-                tcpServiceDic.TryRemove(serverHandle, out tcpServerService);
-            }
-        }
-        /// <summary>
-        /// 关闭所有服务端
-        /// </summary>
-        void CloseAllServer()
-        {
-            foreach (var server in tcpServiceDic)
-            {
-                server.Value.CloseServer();
-            }
+            var _event= new SendMsgToClientCallBackEventArgs(msgContainer);
+            ModuleManager.GetModule<EventManager>().Fire(_event);
         }
     }
 }

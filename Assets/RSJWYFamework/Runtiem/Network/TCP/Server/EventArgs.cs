@@ -48,6 +48,26 @@ namespace RSJWYFamework.Runtime
                 }
             }
             /// <summary>
+            /// 服务端状态事件
+            /// </summary>
+            public sealed class ServerStatusEventArgs : TCPServerSoketBaseEventArgs
+            {
+                /// <summary>
+                /// 服务端Handle
+                /// </summary>
+                public Guid ServerHandle { get; private set; }
+                /// <summary>
+                /// 服务端状态
+                /// </summary>
+                public NetServerStatus status{ get; private set; }
+             
+                public ServerStatusEventArgs(Guid serverHandle,NetServerStatus status)
+                {
+                    ServerHandle = serverHandle;
+                    this.status = status;
+                }
+            }
+            /// <summary>
             /// 收到客户端发来的消息
             /// </summary>
             public sealed class FromClientReceiveMsgCallBackEventArgs : TCPServerSoketBaseEventArgs
@@ -95,6 +115,9 @@ namespace RSJWYFamework.Runtime
             }
             /// <summary>
             /// 向客户端发送消息
+            /// <remarks>
+            /// 指定服务端客户端发送
+            /// </remarks>
             /// </summary>
             public sealed class ServerToClientMsgEventArgs : TCPServerSoketBaseEventArgs
             {
@@ -130,7 +153,7 @@ namespace RSJWYFamework.Runtime
                 
             }
             /// <summary>
-            /// 向所有服务端连上来的客户端发送消息
+            /// 向所有服务端连上来的所有客户端发送消息
             /// </summary>
             public sealed class SendMsgToAllServerAllClient : TCPServerSoketBaseEventArgs
             {
@@ -148,7 +171,7 @@ namespace RSJWYFamework.Runtime
                 }
             }
             /// <summary>
-            /// 通过指定服务端向连上来的客户端发送消息
+            /// 通过指定服务端向连上来的所有客户端发送消息
             /// </summary>
             public sealed class SendMsgToServerAllClient : TCPServerSoketBaseEventArgs
             {
@@ -171,23 +194,17 @@ namespace RSJWYFamework.Runtime
                 }
             }
             /// <summary>
-            /// 服务端状态事件
+            /// 向客户端发送消息完成回调
             /// </summary>
-            public sealed class ServerStatusEventArgs : TCPServerSoketBaseEventArgs
+            public sealed class SendMsgToClientCallBackEventArgs : TCPServerSoketBaseEventArgs
             {
+                public TCPServertToClientMsgCallBack CallBack { get; private set; }
                 /// <summary>
-                /// 服务端Handle
+                /// 构造函数
                 /// </summary>
-                public Guid ServerHandle { get; private set; }
-                /// <summary>
-                /// 服务端状态
-                /// </summary>
-                public NetServerStatus status{ get; private set; }
-             
-                public ServerStatusEventArgs(Guid serverHandle,NetServerStatus status)
+                internal SendMsgToClientCallBackEventArgs(TCPServertToClientMsgCallBack callBack)
                 {
-                    ServerHandle = serverHandle;
-                    this.status = status;
+                    CallBack = callBack;
                 }
             }
 }

@@ -4,7 +4,7 @@ namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 数据数组
-    /// 数据数组结构：记录本条消息后续长度的数据（4位）+序列化后的协议+CRC32校验码（4位长度）
+    /// 数据数组结构：记录本条消息后续长度的数据（4位）+数据载体+CRC32校验码（4位长度）
     /// </summary>
     public class ByteArrayMemory
     {
@@ -20,6 +20,11 @@ namespace RSJWYFamework.Runtime
         /// 缓冲区，存储数据的位置
         /// </summary>
         public Memory<byte> Bytes;
+        /// <summary>
+        /// 原始数组，防止被垃圾回收
+        /// </summary>
+        private byte[] _dataBuffer;
+
         
         /// <summary>
         /// 开始读索引
@@ -51,8 +56,8 @@ namespace RSJWYFamework.Runtime
         
         public ByteArrayMemory()
         {
-            var initialBytes = new byte[default_Size];
-            Bytes = new Memory<byte>(initialBytes);
+            _dataBuffer = new byte[default_Size];
+            Bytes = new Memory<byte>(_dataBuffer);
             Capacity = default_Size;
             m_InitSize = default_Size;
             ReadIndex = 0;
@@ -63,23 +68,26 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public ByteArrayMemory(byte[] defaultBytes)
         {
+            _dataBuffer = defaultBytes;
             Bytes = new Memory<byte>(defaultBytes);
             Capacity = defaultBytes.Length;
             m_InitSize = defaultBytes.Length;
             ReadIndex = 0;
             WriteIndex = defaultBytes.Length;
         }
+        /*
         /// <summary>
         /// 发送信息构造函数
         /// </summary>
         public ByteArrayMemory(Memory<byte> defaultBytes)
         {
+            
             Bytes = defaultBytes;
             Capacity = defaultBytes.Length;
             m_InitSize = defaultBytes.Length;
             ReadIndex = 0;
             WriteIndex = defaultBytes.Length;
-        }
+        }*/
         /// <summary>
         /// 检查是否需要扩容
         /// </summary>
@@ -130,10 +138,10 @@ namespace RSJWYFamework.Runtime
             //重新指定容量大小
             Capacity = n;
             //创建新存储空间，使用新的长度
-            byte[] newBytes = new byte[Capacity];
+            _dataBuffer=new byte[Capacity];
             //拷贝现有数据到新空间
-            Bytes.Slice(ReadIndex, Readable).CopyTo(newBytes);
-            Bytes = newBytes;
+            Bytes.Slice(ReadIndex, Readable).CopyTo(_dataBuffer);
+            Bytes = _dataBuffer;
             //重新读
             WriteIndex = Readable;
             ReadIndex = 0;
@@ -156,6 +164,14 @@ namespace RSJWYFamework.Runtime
         /// <param name="length">读取长度</param>
         public void SetBytes(byte[] buffer,int offset,int length)
         {
+            // 检查是否需要扩容
+            CheckAndMoveBytes();
+            // 检查是否需要扩容
+            if (Remain < length)
+            {
+                //翻倍扩容
+                ReSize(length * 2);
+            }
             // 获取目标 Memory<byte> 的一个切片（Slice），从 WriteIndex 开始，长度为 BytesTransferred
             Memory<byte> target = Bytes.Slice(WriteIndex, length);
             // 从 buffer 获取数据源的 Span<byte>

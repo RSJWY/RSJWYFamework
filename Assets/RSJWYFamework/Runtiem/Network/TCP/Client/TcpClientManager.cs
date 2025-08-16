@@ -109,7 +109,7 @@ namespace RSJWYFamework.Runtime
             }
         }
         /// <summary>
-        /// 向服务器发送消息
+        /// 客户端发送消息
         /// </summary>
         public void ClientSendToServerMsg(object sender, EventArgsBase eventArgsBase)
         {

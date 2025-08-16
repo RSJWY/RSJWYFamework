@@ -137,11 +137,14 @@ namespace RSJWYFamework.Runtime
     
     /// <summary>
     ///消息发送数据容器
+    /// <remarks>
+    /// 仅Service类内组装数据提交给对应客户端容器的发送队列使用
+    /// </remarks>
     /// </summary>
-    internal struct ServerToClientMsgContainer
+    internal class ServerToClientMsgContainer
     {
         /// <summary>
-        /// 消息目标服务器
+        /// 消息目标客户端
         /// </summary>
         internal ClientSocketContainer TargetContainer;
         /// <summary>
@@ -152,64 +155,48 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
         /// </summary>
-        public Guid MsgToken;
+        internal Guid MsgToken;
 
-    }
-
-    /// <summary>
-    /// TCP服务器发送给客户端的消息
-    /// </summary>
-    public class TCPServertToClientMsg
-    {
-        /// <summary>
-        /// 消息发送Token，用于本机发送完成回调唯一标记
-        /// </summary>
-        public Guid MsgToken;
-        /// <summary>
-        /// 消息数据
-        /// </summary>
-        public byte[] data;
-        
-        /// <summary>
-        /// 消息服务器Handle
-        /// </summary>
-        public Guid ServerHandle;
-        
-        /// <summary>
-        /// 消息客户端Handle
-        /// </summary>
-        public Guid ClientHandle;
-        
     }
     
     /// <summary>
-    /// TCP服务器发送给客户端的消息回调
+    /// TCP服务器发送给客户端完成回调
     /// </summary>
     public class TCPServertToClientMsgCallBack
     {
         /// <summary>
         /// 是否发送成功
         /// </summary>
-        public bool Success{ get; internal set; }
+        public bool Success{ get; private set; }
         /// <summary>
         /// 发送失败
         /// </summary>
-        public string Error { get; internal set; }
+        public string Error { get; private set; }
         
         /// <summary>
         /// 消息Token
         /// </summary>
-        public Guid MsgToken{ get; internal set; }
+        public Guid MsgToken{ get; private set; }
         
         /// <summary>
         /// 消息TCPServer Handle
         /// </summary>
-        public Guid TCPServerHandle { get; internal set; }
+        public Guid TCPServerHandle { get; private set; }
         
         /// <summary>
         /// 消息UDPClient Handle
         /// </summary>
-        public Guid TCPClientHandle { get; internal set; }
+        public Guid TCPClientHandle { get; private set; }
+        
+        internal TCPServertToClientMsgCallBack(Guid msgToken, Guid tcpServerHandle, Guid tcpClientHandle,
+            bool success, string error)
+        {
+            MsgToken = msgToken;
+            TCPServerHandle = tcpServerHandle;
+            TCPClientHandle = tcpClientHandle;
+            Success = success;
+            Error = error;
+        }
     }
     /// <summary>
     /// 服务器接收到的来自客户端消息容器

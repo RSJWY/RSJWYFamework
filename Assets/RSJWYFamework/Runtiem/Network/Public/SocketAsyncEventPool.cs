@@ -18,7 +18,7 @@ namespace RSJWYFamework.Runtime
         }
 
         /// <summary>
-        /// 获取时配置完成要操作的数据
+        /// 设置一个空的SocketAsyncEventArgs
         /// </summary>
         /// <returns></returns>
         public SocketAsyncEventArgs GetNullBuffer()

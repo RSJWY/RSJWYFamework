@@ -55,6 +55,7 @@ namespace RSJWYFamework.Runtime
             Data = data;
         }
     }
+    
     /// <summary>
     /// 向服务器发送消息
     /// </summary>
@@ -79,20 +80,7 @@ namespace RSJWYFamework.Runtime
             MsgToken = Guid.NewGuid();
         }
     }
-    /// <summary>
-    /// 客户端发送消息完成
-    /// <remarks>如果进行群发，并不会在全部发送完成时触发，而是每一个客户端服务发送到对应的服务端口触发</remarks>
-    /// </summary>
-    public sealed class TCPClientSendToServerMsgCompleteEventArgs : TCPClientSoketEventArgs
-    {
-        public Guid ClientHandle{get;private set;}
-        public Guid MsgToken{get;private set;}
-        public TCPClientSendToServerMsgCompleteEventArgs(Guid clientHandle, Guid msgToken)
-        {
-            ClientHandle = clientHandle;
-            MsgToken = msgToken;
-        }
-    }
+    
     /// <summary>
     /// 通过所有客户端向每一个对应的服务端发送消息
     /// <remarks>不会全部发送完后触发一次，而是每一个客户端服务发送后都会触发</remarks>
@@ -105,6 +93,20 @@ namespace RSJWYFamework.Runtime
         {
             this.MsgToken = MsgToken;
             this.Data = Data;
+        }
+    }
+    /// <summary>
+    /// 客户端发送消息完成
+    /// <remarks>如果进行群发，并不会在全部发送完成时触发，而是每一个客户端服务发送到对应的服务端口触发</remarks>
+    /// </summary>
+    public sealed class TCPClientSendToServerMsgCompleteEventArgs : TCPClientSoketEventArgs
+    {
+        public Guid ClientHandle{get;private set;}
+        public Guid MsgToken{get;private set;}
+        public TCPClientSendToServerMsgCompleteEventArgs(Guid clientHandle, Guid msgToken)
+        {
+            ClientHandle = clientHandle;
+            MsgToken = msgToken;
         }
     }
 }

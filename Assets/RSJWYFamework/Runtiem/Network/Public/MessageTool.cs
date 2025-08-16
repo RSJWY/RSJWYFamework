@@ -91,7 +91,7 @@ namespace RSJWYFamework.Runtime
                 bodyCrc32Bytes.CopyTo(sendBytes.Slice(sizeof(int) + bodyBytes.Length));
 
                 // 将拼接好的信息用自定义的消息数组保存
-                ByteArrayMemory ba = new ByteArrayMemory(sendBytes);
+                ByteArrayMemory ba = new ByteArrayMemory(sendBytes.ToArray());
 
                 return ba;
             }
@@ -102,8 +102,11 @@ namespace RSJWYFamework.Runtime
             /// <returns></returns>
             internal static ByteArrayMemory SendPingPong()
             {
-                var bodyBytes = HeartbeatPacket;
-                return EncodeMsg(bodyBytes, null);
+                // 创建一个与原数组长度相同的新数组
+                byte[] newPacket = new byte[HeartbeatPacket.Length]; 
+                // 复制内容
+                Array.Copy(HeartbeatPacket, newPacket, HeartbeatPacket.Length);
+                return EncodeMsg(HeartbeatPacket, null);
             }
         }
     }

@@ -161,13 +161,27 @@ namespace RSJWYFamework.Runtime
         /// 客户端服务句柄
         /// </summary>
         private Guid ClientHandle;
+        
+        /// <summary>
+        /// 是否开启调试心跳包
+        /// </summary>
+        private bool _isDebugPingPong = false;
+        /// <summary>
+        /// 数据缓冲区
+        /// </summary>
+        private int _bufferSize = 10485760;
 
-        public TcpClientService(string ip, int port, TcpClientManager socketTcpClientManager, Guid clientHandle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        public TcpClientService(string ip, int port, TcpClientManager socketTcpClientManager,
+            Guid clientHandle,ISocketMsgBodyEncrypt socketMsgBodyEncrypt,
+            bool isDebugPingPong = false,int bufferSize = 10485760)
         {
             _ip = ip;
             _port = port;
             SocketTcpClientManager = socketTcpClientManager;
             ClientHandle = clientHandle;
+            m_MsgBodyEncrypt = socketMsgBodyEncrypt;
+            _isDebugPingPong = isDebugPingPong;
+            _bufferSize = bufferSize;
         }
 
         #region 连接服务器
@@ -266,7 +280,7 @@ namespace RSJWYFamework.Runtime
 
                     //配置socketAsyncEArgs
                     //注意！！！count参数必须设置！
-                    _ReadsocketAsyncEventArgs.SetBuffer(new byte[10485760],0,10485760);
+                    _ReadsocketAsyncEventArgs.SetBuffer(new byte[_bufferSize],0,_bufferSize);
                     _ReadsocketAsyncEventArgs.Completed += IO_Completed;
                     _WritesocketAsyncEventArgs.Completed += IO_Completed;
                 

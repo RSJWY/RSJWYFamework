@@ -321,6 +321,14 @@ namespace RSJWYFamework.Runtime
         
         
         /// <summary>
+        /// 外部请求取消令牌
+        /// </summary>
+        CancellationToken cancellationToken;
+        /// <summary>
+        /// 异步操作任务源
+        /// </summary>
+        private UniTaskCompletionSource _utcs;
+        /// <summary>
         /// 异步操作任务
         /// 简易的异步实现，可不使用回调直接进行异步等待
         /// </summary>
@@ -342,11 +350,6 @@ namespace RSJWYFamework.Runtime
             cancellationToken.Register(AbortOperation);
             return _utcs.Task;
         }  
-        /// <summary>
-        /// 外部请求取消令牌
-        /// </summary>
-        CancellationToken cancellationToken;
-        private UniTaskCompletionSource _utcs;
         #endregion
     }
 }
