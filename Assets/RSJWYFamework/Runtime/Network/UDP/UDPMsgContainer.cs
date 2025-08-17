@@ -11,20 +11,28 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 消息发送Token，用于本机发送完成回调唯一标记
         /// </summary>
-        public Guid MsgToken;
+        public Guid MsgToken { get; private set; }
         /// <summary>
         /// 消息数据
         /// </summary>
-        public byte[] data;
+        public byte[] data{ get; private set; }
         /// <summary>
         /// 消息目标
         /// </summary>
-        public IPEndPoint remoteEndPoint;
+        public IPEndPoint remoteEndPoint{ get; private set; }
 
         /// <summary>
         /// 消息UDPServer Handle
         /// </summary>
-        public Guid UDPServerHandle;
+        public Guid UDPServerHandle{ get; private set; }
+        
+        public UDPSendMsg(Guid msgToken, byte[] data, IPEndPoint remoteEndPoint, Guid udpServerHandle)
+        {
+            MsgToken = msgToken;
+            this.data = data;
+            this.remoteEndPoint = remoteEndPoint;
+            UDPServerHandle = udpServerHandle;
+        }
     }
 
     /// <summary>
@@ -50,6 +58,7 @@ namespace RSJWYFamework.Runtime
         /// 消息UDPServer Handle
         /// </summary>
         public Guid UDPServerHandle { get; internal set; }
+        
     }
     /// <summary>
     /// UDP接收消息
@@ -79,6 +88,7 @@ namespace RSJWYFamework.Runtime
         /// 消息UDPServer Handle
         /// </summary>
         public Guid UDPServerHandle { get; internal set; }
+        
     }
 
 }

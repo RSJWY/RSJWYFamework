@@ -63,7 +63,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 目标消息
         /// </summary>
-        internal ConcurrentQueue<ServerToClientMsgContainer> sendQueue;
+        internal ConcurrentQueue<InternalSendToClientMsgContainer> sendQueue;
 
         /// <summary>
         /// 通知多线程自己跳出
@@ -116,10 +116,10 @@ namespace RSJWYFamework.Runtime
                     Thread.Sleep(1000);//本线程可以每秒检测一次
                     //检测心跳包是否超时的计算
                     //获取当前时间
-                    long timeNow = Utility.Timestamp.UnixTimestampSeconds;
-                    if (timeNow-lastPingTime>ServerService.pingInterval*4)
+                    if (Utility.Timestamp.UnixTimestampSeconds-lastPingTime>ServerService.pingInterval)
                     {
                         ServerService.CloseClientSocket(this);
+                        AppLogger.Warning($"客户端{TokenID}心跳包超时，已关闭连接");
                     }
                 }
                 catch (Exception ex)
@@ -132,76 +132,28 @@ namespace RSJWYFamework.Runtime
                     }
                 }
             }
+            AppLogger.Log($"客户端{TokenID}心跳包检测线程已退出");
         }
     }
-    
-    /// <summary>
-    ///消息发送数据容器
-    /// <remarks>
-    /// 仅Service类内组装数据提交给对应客户端容器的发送队列使用
-    /// </remarks>
-    /// </summary>
-    internal class ServerToClientMsgContainer
+    public enum SendToClientMsgType
     {
         /// <summary>
-        /// 消息目标客户端
+        /// 向指定服务端指定客户端发送消息
         /// </summary>
-        internal ClientSocketContainer TargetContainer;
+        STC,
         /// <summary>
-        /// 已转换完成的消息数组
+        /// 向所有服务端连上来的所有客户端发送消息
         /// </summary>
-        internal ByteArrayMemory SendBytes;
-        
+        ASTAC,
         /// <summary>
-        /// 消息发送Token，用于本机发送完成回调唯一标记
+        /// 向指定服务端所有客户端发送消息
         /// </summary>
-        internal Guid MsgToken;
-
-    }
-    
-    /// <summary>
-    /// TCP服务器发送给客户端完成回调
-    /// </summary>
-    public class TCPServertToClientMsgCallBack
-    {
-        /// <summary>
-        /// 是否发送成功
-        /// </summary>
-        public bool Success{ get; private set; }
-        /// <summary>
-        /// 发送失败
-        /// </summary>
-        public string Error { get; private set; }
-        
-        /// <summary>
-        /// 消息Token
-        /// </summary>
-        public Guid MsgToken{ get; private set; }
-        
-        /// <summary>
-        /// 消息TCPServer Handle
-        /// </summary>
-        public Guid TCPServerHandle { get; private set; }
-        
-        /// <summary>
-        /// 消息UDPClient Handle
-        /// </summary>
-        public Guid TCPClientHandle { get; private set; }
-        
-        internal TCPServertToClientMsgCallBack(Guid msgToken, Guid tcpServerHandle, Guid tcpClientHandle,
-            bool success, string error)
-        {
-            MsgToken = msgToken;
-            TCPServerHandle = tcpServerHandle;
-            TCPClientHandle = tcpClientHandle;
-            Success = success;
-            Error = error;
-        }
+        STAC
     }
     /// <summary>
     /// 服务器接收到的来自客户端消息容器
     /// </summary>
-    public class TCPClientToServerMsg
+    public class FromTCPClientMsg
     {
         /// <summary>
         /// 消息TCPServer Handle
@@ -227,5 +179,154 @@ namespace RSJWYFamework.Runtime
         /// 接收失败原因
         /// </summary>
         public string Error { get; internal set; }
+    }
+    /// <summary>
+    ///消息发送数据容器
+    /// <remarks>
+    /// 仅Service类内组装数据提交给对应客户端容器的发送队列使用
+    /// </remarks>
+    /// </summary>
+    internal class InternalSendToClientMsgContainer
+    {
+        /// <summary>
+        /// 消息目标客户端
+        /// </summary>
+        internal ClientSocketContainer TargetContainer;
+        /// <summary>
+        /// 已转换完成的消息数组
+        /// </summary>
+        internal ByteArrayMemory SendBytes;
+
+        /// <summary>
+        /// 消息发送类型，用于完成回调
+        /// </summary>
+        public SendToClientMsgType SendType;
+        /// <summary>
+        /// 消息发送Token，用于本机发送完成回调唯一标记
+        /// </summary>
+        internal Guid MsgToken;
+    }
+    /// <summary>
+    ///消息发送数据容器
+    /// </summary>
+    public class SendToClientMsgContainer
+    {
+        /// <summary>
+        /// 消息数据
+        /// </summary>
+        public byte[] data{ get; private set; }
+        /// <summary>
+        /// 消息发送Token，用于本机发送完成回调唯一标记
+        /// </summary>
+        public Guid MsgToken{ get; private set; }
+        /// <summary>
+        /// 消息服务器Handle
+        /// </summary>
+        public Guid ServerHandle{ get; private set; }
+        
+        /// <summary>
+        /// 消息客户端Handle
+        /// </summary>
+        public Guid ClientHandle{ get; private set; }
+        
+        /// <summary>
+        /// 消息发送类型
+        /// </summary>
+        public SendToClientMsgType SendType{ get; private set; }
+
+        /// <summary>
+        /// 创建指定服务端指定客户端消息
+        /// </summary>
+        /// <returns></returns>
+        public static SendToClientMsgContainer CreateSTC(
+            byte[] data,Guid serverHandle,Guid clientHandle)
+        {
+            var container = new SendToClientMsgContainer();
+            container.data = data;
+            container.MsgToken = Guid.NewGuid();
+            container.ServerHandle = serverHandle;
+            container.ClientHandle = clientHandle;
+            container.SendType = SendToClientMsgType.STC;
+            return container;
+        }
+        
+        /// <summary>
+        /// 创建向所有服务器所有客户端发送消息
+        /// </summary>
+        /// <returns></returns>
+        public static SendToClientMsgContainer CreateASTAC(byte[] data)
+        {
+            var container = new SendToClientMsgContainer();
+            container.data = data;
+            container.MsgToken = Guid.NewGuid();
+            container.ServerHandle = Guid.Empty;
+            container.ClientHandle = Guid.Empty;
+            container.SendType = SendToClientMsgType.ASTAC;
+            return container;
+        }
+        
+        /// <summary>
+        /// 创建向指定服务端所有客户端发送消息
+        /// </summary>
+        /// <returns></returns>
+        public static SendToClientMsgContainer CreateSTAC(byte[] data,Guid clientHandle)
+        {
+            var container = new SendToClientMsgContainer();
+            container.data = data;
+            container.ServerHandle = Guid.Empty;
+            container.ClientHandle = clientHandle;
+            container.MsgToken = Guid.NewGuid();
+            container.SendType = SendToClientMsgType.STAC;
+            return container;
+        }
+    }
+
+    
+    
+    /// <summary>
+    /// TCP服务器发送给客户端完成回调
+    /// </summary>
+    public class TCPServertToClientMsgCallBack
+    {
+        public enum SendCallBackType
+        {
+            Success,
+            Error,
+            Exception
+        }
+        /// <summary>
+        /// 发送回调类型
+        /// </summary>
+        public SendCallBackType CallBackType { get; internal set; }
+
+        /// <summary>
+        /// Socket回调状态
+        /// </summary>
+        public SocketError SocketError { get; internal set; }
+        
+        /// <summary>
+        /// 发送类型
+        /// </summary>
+        public SendToClientMsgType SendType { get; internal set; }
+        /// <summary>
+        /// 发送失败
+        /// </summary>
+        public string Error { get; internal set; }
+        
+        /// <summary>
+        /// 消息Token
+        /// </summary>
+        public Guid MsgToken{ get; internal set; }
+        
+        /// <summary>
+        /// 消息TCPServer Handle
+        /// </summary>
+        public Guid TCPServerHandle { get; internal set; }
+        
+        /// <summary>
+        /// 消息UDPClient Handle
+        /// </summary>
+        public Guid TCPClientHandle { get; internal set; }
+        
     }
 }

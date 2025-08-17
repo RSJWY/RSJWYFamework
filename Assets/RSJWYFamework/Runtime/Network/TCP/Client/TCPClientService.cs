@@ -150,7 +150,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 通知多线程自己跳出
         /// </summary>
-        private static CancellationTokenSource cts;
+        private CancellationTokenSource cts;
 
         /// <summary>
         /// 绑定的客户端控制器，便于回调
@@ -285,18 +285,24 @@ namespace RSJWYFamework.Runtime
                     _WritesocketAsyncEventArgs.Completed += IO_Completed;
                 
                     //创建消息处理线程-后台处理
-                    m_msgThread = new Thread(() =>FromMsgThread(cts.Token));
-                    m_msgThread.IsBackground = true;//设置为后台可运行
+                    m_msgThread = new Thread(() =>FromMsgThread(cts.Token))
+                    {
+                        IsBackground = true //设置为后台可运行
+                    };
                     m_msgThread.Start();//启动线程
                 
                     //心跳包线程-后台处理
-                    m_HeartThread = new Thread(() =>PingThread(cts.Token));
-                    m_HeartThread.IsBackground = true;//后台运行
+                    m_HeartThread = new Thread(() =>PingThread(cts.Token))
+                    {
+                        IsBackground = true //后台运行
+                    };
                     m_HeartThread.Start();
 
                     //消息发送线程
-                    msgSendThread = new Thread(() =>MsgSendListenThread(cts.Token));
-                    msgSendThread.IsBackground = true;
+                    msgSendThread = new Thread(() =>MsgSendListenThread(cts.Token))
+                    {
+                        IsBackground = true
+                    };
                     msgSendThread.Start();
                     //已连接
                     Status = NetClientStatus.Connect;
@@ -544,6 +550,7 @@ namespace RSJWYFamework.Runtime
                     }
                 }
             }
+            AppLogger.Log($"消息处理线程已退出");
         }
 
         /// <summary>
@@ -589,6 +596,7 @@ namespace RSJWYFamework.Runtime
                     }
                 }
             }
+            AppLogger.Log($"心跳包检测线程已退出");
         }
         /// <summary>
         /// 消息队列发送监控线程
@@ -633,6 +641,7 @@ namespace RSJWYFamework.Runtime
                     }
                 }
             }
+            AppLogger.Log($"消息发送线程已退出");
         }
 
         #endregion

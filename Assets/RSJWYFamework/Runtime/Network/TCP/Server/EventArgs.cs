@@ -67,52 +67,21 @@ namespace RSJWYFamework.Runtime
                     this.status = status;
                 }
             }
+            
+            
             /// <summary>
             /// 收到客户端发来的消息
             /// </summary>
             public sealed class FromClientReceiveMsgCallBackEventArgs : TCPServerSoketBaseEventArgs
             {
-                /*
-                /// <summary>
-                /// 消息容器
-                /// </summary>
-                public TCPClientToServerMsg msgContainer { get;internal set; }
-                */
-                
-                /// <summary>
-                /// 消息TCPServer Handle
-                /// </summary>
-                public Guid TCPServerHandle { get; private set; }
-        
-                /// <summary>
-                /// 消息UDPClient Handle
-                /// </summary>
-                public Guid TCPClientHandle { get; private set; }
-        
-                /// <summary>
-                /// 消息数据
-                /// </summary>
-                public byte[] msgBytes{ get; private set; }
-        
-                /// <summary>
-                /// 接收是否成功
-                /// </summary>
-                public bool Success { get; private set; }
-        
-                /// <summary>
-                /// 接收失败原因
-                /// </summary>
-                public string Error { get; private set; }
+                public FromTCPClientMsg MSGContainer { get;private set; }
 
-                public FromClientReceiveMsgCallBackEventArgs(Guid serverHandle, Guid clientHandle,byte[] msgBytes,bool success,string error)
+                public FromClientReceiveMsgCallBackEventArgs(FromTCPClientMsg msgContainer)
                 {
-                    TCPServerHandle = serverHandle;
-                    TCPClientHandle = clientHandle;
-                    this.msgBytes = msgBytes;
-                    Success = success;
-                    Error = error;
+                    MSGContainer=msgContainer;
                 }
             }
+            
             /// <summary>
             /// 向客户端发送消息
             /// <remarks>
@@ -121,80 +90,43 @@ namespace RSJWYFamework.Runtime
             /// </summary>
             public sealed class ServerToClientMsgEventArgs : TCPServerSoketBaseEventArgs
             {
-                //public readonly TCPServertToClientMsg msgContainer;
+                public SendToClientMsgContainer msgContainer { get; private set; }
+
                 /// <summary>
-                /// 消息发送Token，用于本机发送完成回调唯一标记
+                /// 指定服务端指定客户端发送消息
                 /// </summary>
-                public Guid MsgToken{ get; private set; }
-                /// <summary>
-                /// 消息数据
-                /// </summary>
-                public byte[] data{ get; private set; }
-                /// <summary>
-                /// 消息服务器Handle
-                /// </summary>
-                public Guid ServerHandle{ get; private set; }
-        
-                /// <summary>
-                /// 消息客户端Handle
-                /// </summary>
-                public Guid ClientHandle{ get; private set; }
-                
-                /// <summary>
-                /// 构造函数
-                /// </summary>
-                public ServerToClientMsgEventArgs(Guid msgToken,byte[] data,Guid serverHandle,Guid clientHandle)
+                /// <returns></returns>
+                public static ServerToClientMsgEventArgs CreateSTC(byte[] data, Guid serverHandle, Guid clientHandle)
                 {
-                    MsgToken = msgToken;
-                    this.data = data;
-                    ServerHandle = serverHandle;
-                    ClientHandle = clientHandle;
+                    var args = new ServerToClientMsgEventArgs();
+                    args.msgContainer = SendToClientMsgContainer.CreateSTC(data, serverHandle, clientHandle);
+                    return args;
                 }
-                
-            }
-            /// <summary>
-            /// 向所有服务端连上来的所有客户端发送消息
-            /// </summary>
-            public sealed class SendMsgToAllServerAllClient : TCPServerSoketBaseEventArgs
-            {
                 /// <summary>
-                /// 消息数据
+                /// 向所有服务端连上来的所有客户端发送消息
                 /// </summary>
-                public byte[] data{ get; private set; }
-                
-                /// <summary>
-                /// 构造函数
-                /// </summary>
-                public SendMsgToAllServerAllClient(byte[] data)
+                /// <returns></returns>
+                public static ServerToClientMsgEventArgs CreateASTAC(byte[] data)
                 {
-                    this.data = data;
+                    var args = new ServerToClientMsgEventArgs();
+                    args.msgContainer = SendToClientMsgContainer.CreateASTAC(data);
+                    return args;
+                }
+                /// <summary>
+                /// 向指定服务端连上来的所有客户端发送消息
+                /// </summary>
+                /// <returns></returns>
+                public static ServerToClientMsgEventArgs CreateSTAC(byte[] data, Guid clientHandle)
+                {
+                    var args = new ServerToClientMsgEventArgs();
+                    args.msgContainer = SendToClientMsgContainer.CreateSTAC(data, clientHandle);
+                    return args;
                 }
             }
-            /// <summary>
-            /// 通过指定服务端向连上来的所有客户端发送消息
-            /// </summary>
-            public sealed class SendMsgToServerAllClient : TCPServerSoketBaseEventArgs
-            {
-                /// <summary>
-                /// 服务端Handle
-                /// </summary>
-                public Guid ServerHandle{ get; private set; }
-                /// <summary>
-                /// 消息数据
-                /// </summary>
-                public byte[] data{ get; private set; }
-                
-                /// <summary>
-                /// 构造函数
-                /// </summary>
-                public SendMsgToServerAllClient(Guid serverHandle,byte[] data)
-                {
-                    ServerHandle = serverHandle;
-                    this.data = data;
-                }
-            }
+    
             /// <summary>
             /// 向客户端发送消息完成回调
+            /// <remarks></remarks>
             /// </summary>
             public sealed class SendMsgToClientCallBackEventArgs : TCPServerSoketBaseEventArgs
             {

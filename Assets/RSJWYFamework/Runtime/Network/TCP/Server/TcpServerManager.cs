@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using Unity.Collections;
 
 namespace RSJWYFamework.Runtime
 {
@@ -19,16 +20,12 @@ namespace RSJWYFamework.Runtime
         public override void Initialize()
         {
             ModuleManager.GetModule<EventManager>().BindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            ModuleManager.GetModule<EventManager>().BindEvent<SendMsgToAllServerAllClient>(SendMsgToAllServerAllClientEvent);
-            ModuleManager.GetModule<EventManager>().BindEvent<SendMsgToServerAllClient>(SendMsgToServerAllClientEvent);
         }
 
 
         public override void Shutdown()
         {
             ModuleManager.GetModule<EventManager>().UnBindEvent<ServerToClientMsgEventArgs>(SendMsgToClientEvent);
-            ModuleManager.GetModule<EventManager>().UnBindEvent<SendMsgToAllServerAllClient>(SendMsgToAllServerAllClientEvent);
-            ModuleManager.GetModule<EventManager>().UnBindEvent<SendMsgToServerAllClient>(SendMsgToServerAllClientEvent);
             CloseAllServer();
         }
 
@@ -77,7 +74,7 @@ namespace RSJWYFamework.Runtime
                 var handle = Guid.NewGuid();
                 var service = new TcpServerService(
                     ip, port, this, handle, 
-                    socketMsgBodyEncrypt,true
+                    socketMsgBodyEncrypt,isDebugPingPong
                     ,bufferSize,limit,initCount);
                 service.Bind();
                 if (!tcpServiceDic.TryAdd(handle,service))
@@ -129,71 +126,50 @@ namespace RSJWYFamework.Runtime
                 server.Value.CloseServer();
             }
         }
-        
         /// <summary>
-        /// 接收广播所有消息事件
-        /// </summary>
-        public void SendMsgToAllServerAllClientEvent(object sender, EventArgsBase eventArgsBase)
-        {
-            if (eventArgsBase is SendMsgToAllServerAllClient args) 
-                SendMsgToAllServerAllClient(args.data);
-        }
-        /// <summary>
-        /// 接收通过指定服务端向已连接设备广播消息
-        /// </summary>
-        private void SendMsgToServerAllClientEvent(object sender, EventArgsBase eventArgsBase)
-        {
-            if (eventArgsBase is SendMsgToServerAllClient args) 
-                SendMsgToServerAllClient(args.data,args.ServerHandle);
-        }
-        /// <summary>
-        /// 向所有连接上来设备所有客户端广播消息
-        /// </summary>
-        /// <param name="msgBytes"></param>
-        public void SendMsgToAllServerAllClient(byte[] msgBytes)
-        {
-            foreach (var serveice in tcpServiceDic)
-            {
-                SendMsgToServerAllClient(msgBytes,serveice.Key);
-            }
-        }
-
-        /// <summary>
-        /// 向指定服务端的所有客户端广播消息
-        /// </summary>
-        public void SendMsgToServerAllClient(byte[] msgBytes,Guid serverHandle)
-        {
-            if (tcpServiceDic.TryGetValue(serverHandle, out var service))
-            {
-                service.SendToAllClientMessage(msgBytes);
-            }
-            else
-            {
-                AppLogger.Error($"服务端Handle不存在: {serverHandle}");
-            }
-        }
-        
-        
-        /// <summary>
-        /// 接收发送消息事件
+        /// 接收客户端消息
         /// </summary>
         public void SendMsgToClientEvent(object sender, EventArgsBase eventArgsBase)
         {
             if (eventArgsBase is ServerToClientMsgEventArgs args)
-                SendMsgToClient(args.ServerHandle, args.ClientHandle, args.MsgToken,args.data);
+            {
+                switch (args.msgContainer.SendType)
+                {
+                    case SendToClientMsgType.STC:
+                        SendMsgToClient(args.msgContainer);
+                        break;
+                    case SendToClientMsgType.ASTAC:
+                        foreach (var serverService in tcpServiceDic)
+                        {
+                            serverService.Value.SendToAllClientMessage(args.msgContainer);
+                        }
+                        break;
+                    case SendToClientMsgType.STAC:
+                        if (tcpServiceDic.TryGetValue(args.msgContainer.ServerHandle, out var tcpServerService))
+                        {
+                            tcpServerService.SendToAllClientMessage(args.msgContainer);
+                        }
+                        else
+                        {
+                            AppLogger.Error($"服务端Handle不存在: {args.msgContainer.ServerHandle}");
+                        }
+                        break;
+                }
+            }
         }
+       
         /// <summary>
         /// 指定服务端指定客户端发送消息
         /// </summary>
-        public void SendMsgToClient(Guid serverHandle, Guid clientHandle,Guid MsgToken,byte[] data)
+        public void SendMsgToClient(SendToClientMsgContainer msgContainer)
         {
-            if (tcpServiceDic.TryGetValue(serverHandle,out var tcpServerService))
+            if (tcpServiceDic.TryGetValue(msgContainer.ServerHandle,out var tcpServerService))
             {
-                tcpServerService?.SendMessage(data,clientHandle,MsgToken);
+                tcpServerService?.SendToClientMessage(msgContainer);
             }
             else
             {
-                AppLogger.Error($"服务端Handle不存在: {serverHandle}");
+                AppLogger.Error($"服务端Handle不存在: {msgContainer.ServerHandle}");
             }
         }
         
@@ -232,15 +208,9 @@ namespace RSJWYFamework.Runtime
         /// <remarks>
         /// 注意！！本函数从消息处理线程调用，注意多线程问题！
         /// </remarks>
-        internal void FromClientReceiveMsgCallBack(TCPClientToServerMsg msgContainer)
+        internal void FromClientReceiveMsgCallBack(FromTCPClientMsg msgContainer)
         {
-            var _event= new FromClientReceiveMsgCallBackEventArgs(
-                msgContainer.TCPServerHandle,
-                msgContainer.TCPClientHandle,
-                msgContainer.msgBytes,
-                msgContainer.Success,
-                msgContainer.Error
-                );
+            var _event= new FromClientReceiveMsgCallBackEventArgs(msgContainer);
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
         

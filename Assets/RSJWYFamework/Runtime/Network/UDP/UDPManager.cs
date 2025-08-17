@@ -20,8 +20,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 创建一个UDP服务
         /// </summary>
-        /// <returns></returns>
-        public Guid Bind(string ip, int port) 
+        public Guid Bind(string ip, int port,bool enableBroadcast=true) 
         {
             try 
             {
@@ -32,7 +31,7 @@ namespace RSJWYFamework.Runtime
                 }
 
                 var handle = Guid.NewGuid();
-                var service = new UDPService(ip, port, this, handle);
+                var service = new UDPService(ip, port, this, handle,true);
 
                 service.Bind();
 

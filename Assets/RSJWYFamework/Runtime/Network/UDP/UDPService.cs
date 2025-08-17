@@ -67,19 +67,18 @@ namespace RSJWYFamework.Runtime
         /// 服务句柄
         /// </summary>
         private Guid _handle;
-        internal UDPService(string ip, int port,UDPManager udpManager, Guid handle)
+        
+        /// <summary>
+        /// 是否支持广播
+        /// </summary>
+        private bool _enableBroadcast;
+        internal UDPService(string ip, int port,UDPManager udpManager, Guid handle,bool enableBroadcast=true)
         {
             this._ip = IPAddress.Parse(ip);
             this._port = port;
             this._udpManager = udpManager;
             this._handle = handle;
-        }
-
-        internal UDPService(IPAddress ipAddress, int port,UDPManager udpManager, Guid handle)
-        {
-            _ip = ipAddress;
-            this._port = port;
-            this._udpManager = udpManager;
+            this._enableBroadcast = enableBroadcast;
         }
 
         /// <summary>
@@ -92,7 +91,7 @@ namespace RSJWYFamework.Runtime
             {
                 _udpClient = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                 //支持广播消息
-                _udpClient.EnableBroadcast = true;
+                _udpClient.EnableBroadcast = _enableBroadcast;
                 //配置监听
                 ipendpoint = new IPEndPoint(_ip, _port);
                 _udpClient.Bind(ipendpoint);
@@ -226,7 +225,6 @@ namespace RSJWYFamework.Runtime
             // 处理发送完成的逻辑
             if (e.SocketError == SocketError.Success)
             {
-               
                 _udpManager.SendMsgCallBack(new UDPSendCallBack()
                 {
                     Success = true,
