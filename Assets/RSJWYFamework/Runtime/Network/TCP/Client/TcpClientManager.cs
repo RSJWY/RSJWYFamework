@@ -31,12 +31,13 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 客户端是否存在
         /// </summary>
-        public bool IsExistServer(Guid serverHandle)
+        public bool IsExistClient(Guid serverHandle)
         {
             return tcpClientDic.ContainsKey(serverHandle);
         }
         
-        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt)
+        public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt,
+            bool isDebugPingPong = true,int bufferSize = 10485760)
         {
             try
             {
@@ -46,7 +47,8 @@ namespace RSJWYFamework.Runtime
                     return Guid.Empty;
                 }
                 var handle = Guid.NewGuid();
-                var service = new TcpClientService(ip, port, this, handle, socketMsgBodyEncrypt);
+                var service = new TcpClientService(ip, port, this, handle, socketMsgBodyEncrypt,
+                    isDebugPingPong,bufferSize);
                 service.Connect();
                 if (!tcpClientDic.TryAdd(handle,service))
                 {
@@ -79,9 +81,10 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 客户端状态变更
         /// </summary>
-        public void ClientStatus(NetClientStatus netClientStatus,Guid clientHandle)
+        internal void ClientStatus(NetClientStatus netClientStatus,Guid clientHandle)
         {
             var _event= new TCPClientStatusEventArgs(netClientStatus, clientHandle);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -90,9 +93,10 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="msgBase"></param>
         /// <param name="clientHandle"></param>
-        public void ReceiveFromServerMsgCallBack(byte[] msgBase,Guid clientHandle)
+        internal void ReceiveFromServerMsgCallBack(byte[] msgBase,Guid clientHandle)
         {
             var _event= new TCPClientReceivesMsgFromServer(msgBase, clientHandle);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
         /// <summary>
@@ -136,9 +140,10 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="clientHandle"></param>
         /// <param name="msgToken"></param>
-        public void ClientSendToServerMsgCompleteCallBack(Guid clientHandle, Guid msgToken)
+        internal void ClientSendToServerMsgCompleteCallBack(Guid clientHandle, Guid msgToken)
         {
             var _event= new TCPClientSendToServerMsgCompleteEventArgs(clientHandle, msgToken);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 

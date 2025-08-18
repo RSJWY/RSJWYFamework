@@ -398,7 +398,8 @@ namespace RSJWYFamework.Runtime
                                 //写心跳信息
                                 //更新接收到的心跳包时间（后台运行）
                                 lastPongTime = Utility.Timestamp.UnixTimestampSeconds;
-                                AppLogger.Log($"<color=blue>接收到服务器心跳包</color>");
+                                if (_isDebugPingPong)
+                                    AppLogger.Log($"<color=blue>接收到服务器心跳包</color>");
                             }
                             else
                             {
@@ -456,10 +457,12 @@ namespace RSJWYFamework.Runtime
                     else
                     {
                         m_WriteQueue.TryDequeue(out var _bDelete);//取出但不使用，只为了从队列中移除
-                        SocketTcpClientManager.ClientSendToServerMsgCompleteCallBack(ClientHandle,ba.MsgToken);
+                        if (ba.MsgToken!=Guid.Empty)
+                        {
+                            SocketTcpClientManager.ClientSendToServerMsgCompleteCallBack(ClientHandle,ba.MsgToken);
+                        }
                         ba = null;//发送完成，置空
                         //本条数据发送完成，激活线程，继续处理下一条
-                        
                         // 🔔 唤醒发送线程
                         msgSendDoneEvent.Set();
 
@@ -467,7 +470,7 @@ namespace RSJWYFamework.Runtime
                 }
                 else
                 {
-                    AppLogger.Error($"向服务器发送消息失败 ProcessSend Error:SocketErrorCode：{socketAsyncEventArgs.SocketError}" );
+                    AppLogger.Error($"向服务器发送消息失败 ProcessSend Error:SocketErrorCode：{socketAsyncEventArgs.SocketError},BytesTransferred:{socketAsyncEventArgs.BytesTransferred}" );
                     Close();
                 }
                 
@@ -492,9 +495,8 @@ namespace RSJWYFamework.Runtime
             //写入数据
             try
             {
-                ByteArrayMemory sendOldBytes = Utility.TCPSocketTool.EncodeMsg(msgBase,m_MsgBodyEncrypt);
-                sendOldBytes.WriteIndex = 0;
-                var sendToServerMsg = new SendClientToServerMsg(sendOldBytes,msgToken);
+                ByteArrayMemory sendBytes = Utility.TCPSocketTool.EncodeMsg(msgBase,m_MsgBodyEncrypt);
+                var sendToServerMsg = new SendClientToServerMsg(sendBytes,msgToken);
                 //写入到队列，向服务器发送消息
                 m_WriteQueue.Enqueue(sendToServerMsg);//放入队列
             }
@@ -572,15 +574,16 @@ namespace RSJWYFamework.Runtime
                     long timeNow = Utility.Timestamp.UnixTimestampSeconds;
                     if (timeNow - lastPingTime > m_PingInterval)
                     {
-                        //规定时间到，发送心跳包到服务器
-                        AppLogger.Log($"<color=green>向服务器发送心跳包</color>");
                         lastPingTime = timeNow;
                         //发送心跳包
-                        var sendToServerMsg = new SendClientToServerMsg(Utility.TCPSocketTool.SendPingPong(),Guid.NewGuid());
+                        var sendToServerMsg = new SendClientToServerMsg(Utility.TCPSocketTool.SendPingPong(),Guid.Empty);
                         m_WriteQueue.Enqueue(sendToServerMsg);
+                        //规定时间到，发送心跳包到服务器
+                        if (_isDebugPingPong)
+                            AppLogger.Log($"<color=green>向服务器发送心跳包</color>");
                     }
                     //如果心跳包过长时间没收到，关闭链接
-                    if (timeNow - lastPongTime > m_PingInterval * 12)
+                    if (timeNow - lastPongTime > m_PingInterval * 5)
                     {
                         AppLogger.Warning("服务器返回心跳包超时");
                         Close();

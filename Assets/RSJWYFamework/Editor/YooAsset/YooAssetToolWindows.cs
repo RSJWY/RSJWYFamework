@@ -127,7 +127,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
                 buildParameters.BuiltinShadersBundleName = builtinShaderBundleName;
                 buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
-                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
 
                 var pipeline = new ScriptableBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
@@ -153,7 +154,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
                 buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
-                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
                 
                 var pipeline = new BuiltinBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
@@ -177,7 +179,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
                 buildParameters.EncryptionServices = new Utility.YooAsset.EncryptRF();
-                buildParameters.ManifestServices = new Utility.YooAsset.AppHotPackgaeManifestServices();
+                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
                 
                 var pipeline = new RawFileBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);

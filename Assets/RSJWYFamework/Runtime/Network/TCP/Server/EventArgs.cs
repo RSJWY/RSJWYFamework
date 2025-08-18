@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace RSJWYFamework.Runtime
 { 
@@ -72,11 +73,11 @@ namespace RSJWYFamework.Runtime
             /// <summary>
             /// 收到客户端发来的消息
             /// </summary>
-            public sealed class FromClientReceiveMsgCallBackEventArgs : TCPServerSoketBaseEventArgs
+            public sealed class FromClientReceiveMsgEventArgs : TCPServerSoketBaseEventArgs
             {
                 public FromTCPClientMsg MSGContainer { get;private set; }
 
-                public FromClientReceiveMsgCallBackEventArgs(FromTCPClientMsg msgContainer)
+                public FromClientReceiveMsgEventArgs(FromTCPClientMsg msgContainer)
                 {
                     MSGContainer=msgContainer;
                 }

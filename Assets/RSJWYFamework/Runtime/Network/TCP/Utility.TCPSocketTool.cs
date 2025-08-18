@@ -19,6 +19,11 @@ namespace RSJWYFamework.Runtime
                 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00
             };
 
+            public static Guid GetPingGUID()
+            {
+                return new Guid(HeartbeatPacket);
+            }
+
             /// <summary>
             /// 反序列化本次的消息
             /// </summary>
@@ -49,7 +54,7 @@ namespace RSJWYFamework.Runtime
                 if (!bodyBytes.Span.SequenceEqual(HeartbeatPacket))
                 {
                     //解密消息
-                    Memory<byte> decryptBodyBytes=iSocketMsgBodyEncrypt==null?bodyBytes:iSocketMsgBodyEncrypt.Decrypt(bodyBytes);
+                    byte[] decryptBodyBytes=iSocketMsgBodyEncrypt==null?bodyBytes.ToArray():iSocketMsgBodyEncrypt.Decrypt(bodyBytes.ToArray());
                     return (decryptBodyBytes.ToArray(), false);
                 }
                 else
@@ -97,8 +102,9 @@ namespace RSJWYFamework.Runtime
             }
 
             /// <summary>
-            /// 创建心跳包特征消息-不执行任何加密
+            /// 创建心跳包特征消息
             /// </summary>
+            /// <remarks>内部直接构建</remarks>
             /// <returns></returns>
             internal static ByteArrayMemory SendPingPong()
             {

@@ -418,10 +418,12 @@ namespace RSJWYFamework.Runtime
                                 InternalSendToClientMsgContainer pingpongMsg = new()
                                 {
                                     TargetContainer = clientToken,
-                                    SendBytes = Utility.TCPSocketTool.SendPingPong()
+                                    SendBytes = Utility.TCPSocketTool.SendPingPong(),
+                                    SendType = SendToClientMsgType.STC,
                                 };
                                 clientToken.sendQueue.Enqueue(pingpongMsg);
-                                AppLogger.Log($"<color=blue>接收到客户端{clientToken.Remote}心跳包，返回心跳包</color>");
+                                if (_isDebugPingPong)
+                                    AppLogger.Log($"<color=blue>接收到客户端{clientToken.Remote}心跳包，返回心跳包</color>");
                             }
                             else
                             {
@@ -449,7 +451,7 @@ namespace RSJWYFamework.Runtime
                 }
                 else
                 {
-                    AppLogger.Warning($"读取客户端：{clientToken.TokenID}-{clientToken.Remote}发来的消息出错！！错误信息： {socketAsyncEA.SocketError}，将关闭本链接" );
+                    AppLogger.Warning($"读取客户端：{clientToken.TokenID}-{clientToken.Remote}发来的消息出错！！错误信息： {socketAsyncEA.SocketError}、{socketAsyncEA.BytesTransferred}，将关闭本链接" );
                     CloseClientSocket(clientToken);
                 }
             }
@@ -557,16 +559,19 @@ namespace RSJWYFamework.Runtime
                         clientToken.sendQueue.TryDequeue(out var _); //取出但不使用，只为了从队列中移除
                         _ba = null; //发送完成
                         //发送完成，调用回调
-                        var _callBack = new TCPServertToClientMsgCallBack()
+                        if (_msgbase.MsgToken!=Guid.Empty)
                         {
-                            CallBackType = TCPServertToClientMsgCallBack.SendCallBackType.Success,
-                            SocketError = socketAsyncEA.SocketError,
-                            Error = string.Empty,
-                            MsgToken = _msgbase.MsgToken,
-                            TCPServerHandle = _handle,
-                            TCPClientHandle = clientToken.TokenID,
-                        };
-                        _tcpServerManager.SendMsgToClientCallBack(_callBack);
+                            var _callBack = new TCPServertToClientMsgCallBack()
+                            {
+                                CallBackType = TCPServertToClientMsgCallBack.SendCallBackType.Success,
+                                SocketError = socketAsyncEA.SocketError,
+                                Error = string.Empty,
+                                MsgToken = _msgbase.MsgToken,
+                                TCPServerHandle = _handle,
+                                TCPClientHandle = clientToken.TokenID,
+                            };
+                            _tcpServerManager.SendMsgToClientCallBack(_callBack);
+                        }
                     }
                     else
                     {

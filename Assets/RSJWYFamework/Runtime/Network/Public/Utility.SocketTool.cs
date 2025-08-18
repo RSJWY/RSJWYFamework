@@ -10,6 +10,11 @@ namespace RSJWYFamework.Runtime
         public static class SocketTool
         {
 
+            /// <summary>
+            /// 判断字符串是否为16进制
+            /// </summary>
+            /// <param name="input"></param>
+            /// <returns></returns>
             public static bool IsHex(string input)
             {
                 // 正则表达式匹配16进制值  

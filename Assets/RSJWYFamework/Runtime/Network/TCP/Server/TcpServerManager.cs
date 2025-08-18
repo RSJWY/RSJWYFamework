@@ -62,7 +62,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="initCount">初始化对象数量</param>
         /// <returns>服务端Handle</returns>
         public Guid Bind(string ip , int port,ISocketMsgBodyEncrypt socketMsgBodyEncrypt,
-            bool isDebugPingPong = false,int bufferSize = 10485760,int limit = 100,int initCount = 10)
+            bool isDebugPingPong = true,int bufferSize = 10485760,int limit = 100,int initCount = 10)
         {
             try
             {
@@ -96,8 +96,7 @@ namespace RSJWYFamework.Runtime
         {
             if (tcpServiceDic.TryGetValue(serverHandle, out var tcpServerService))
             {
-                tcpServerService.CloseServer();
-                tcpServiceDic.TryRemove(serverHandle, out tcpServerService);
+                CloseServer(serverHandle);
             }
             else
             {
@@ -176,9 +175,10 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 客户端链接上来
         /// </summary>
-        public void ClientConnectedCallBack(Guid serverHandle,Guid clientHandle)
+        internal void ClientConnectedCallBack(Guid serverHandle,Guid clientHandle)
         {
             var _event = new ServerClientConnectedCallBackEventArgs(serverHandle, clientHandle);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -188,6 +188,7 @@ namespace RSJWYFamework.Runtime
         public void CloseClientReCallBack(Guid serverHandle,Guid clientHandle)
         {
             var _event = new ServerCloseClientCallBackEventArgs(serverHandle, clientHandle);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -195,10 +196,10 @@ namespace RSJWYFamework.Runtime
         /// 服务端状态更新
         /// </summary>
         /// <param name="netServerStatus"></param>
-        public void ServerServiceStatus(Guid serverHandle,NetServerStatus netServerStatus)
+        internal void ServerServiceStatus(Guid serverHandle,NetServerStatus netServerStatus)
         {
             var _event = new ServerStatusEventArgs(serverHandle,netServerStatus);
-            
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
 
@@ -210,7 +211,8 @@ namespace RSJWYFamework.Runtime
         /// </remarks>
         internal void FromClientReceiveMsgCallBack(FromTCPClientMsg msgContainer)
         {
-            var _event= new FromClientReceiveMsgCallBackEventArgs(msgContainer);
+            var _event= new FromClientReceiveMsgEventArgs(msgContainer);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
         
@@ -223,6 +225,7 @@ namespace RSJWYFamework.Runtime
         internal void SendMsgToClientCallBack(TCPServertToClientMsgCallBack  msgContainer)
         {
             var _event= new SendMsgToClientCallBackEventArgs(msgContainer);
+            _event.Sender = this;
             ModuleManager.GetModule<EventManager>().Fire(_event);
         }
     }

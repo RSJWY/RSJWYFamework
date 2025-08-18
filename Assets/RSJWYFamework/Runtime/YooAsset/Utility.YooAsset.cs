@@ -128,12 +128,18 @@ namespace RSJWYFamework.Runtime
             /// <summary>
             /// 资源清单数据处理
             /// </summary>
-            public class AppHotPackgaeManifestServices:IManifestServices
+            public class AppHotPackgaeManifestProcessServices:IManifestProcessServices
             {
                 public byte[] ProcessManifest(byte[] fileData)
                 {
                     return fileData;
                 }
+            }
+            /// <summary>
+            /// 资源清单数据处理
+            /// </summary>
+            public class AppHotPackgaeManifestRestoreServices:IManifestRestoreServices
+            {
 
                 public byte[] RestoreManifest(byte[] fileData)
                 {
