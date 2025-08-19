@@ -17,10 +17,14 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private readonly ConcurrentDictionary<Guid, UDPService> udpServiceDic = new();
 
+        public bool IsExistUDPService(Guid handle)
+        {
+            return udpServiceDic.ContainsKey(handle);
+        }
         /// <summary>
         /// 创建一个UDP服务
         /// </summary>
-        public Guid Bind(string ip, int port,bool enableBroadcast=true) 
+        public Guid Bind(string ip, int port,UDPManager udpManager,int bufferSize=1024*1024,bool enableBroadcast=true) 
         {
             try 
             {
@@ -31,7 +35,7 @@ namespace RSJWYFamework.Runtime
                 }
 
                 var handle = Guid.NewGuid();
-                var service = new UDPService(ip, port, this, handle,true);
+                var service = new UDPService(ip, port, this, handle,bufferSize,enableBroadcast);
 
                 service.Bind();
 

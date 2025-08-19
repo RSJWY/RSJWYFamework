@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -72,13 +71,16 @@ namespace RSJWYFamework.Runtime
         /// 是否支持广播
         /// </summary>
         private bool _enableBroadcast;
-        internal UDPService(string ip, int port,UDPManager udpManager, Guid handle,bool enableBroadcast=true)
+
+        private int _bufferSize = 1024 * 1024;
+        internal UDPService(string ip, int port,UDPManager udpManager, Guid handle,int bufferSize=1024*1024,bool enableBroadcast=true)
         {
             this._ip = IPAddress.Parse(ip);
             this._port = port;
             this._udpManager = udpManager;
             this._handle = handle;
             this._enableBroadcast = enableBroadcast;
+            this._bufferSize = bufferSize;
         }
 
         /// <summary>
@@ -114,7 +116,7 @@ namespace RSJWYFamework.Runtime
         private void Start()
         {
             _read = new SocketAsyncEventArgs();
-            _read.SetBuffer(new byte[1024*1024], 0, 1024*1024);
+            _read.SetBuffer(new byte[_bufferSize], 0, _bufferSize);
             _read.RemoteEndPoint = ipendpoint;
             _read.Completed += IO_Completed; 
             
