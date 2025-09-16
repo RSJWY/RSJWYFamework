@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     
     public class RotateScript : MonoBehaviour

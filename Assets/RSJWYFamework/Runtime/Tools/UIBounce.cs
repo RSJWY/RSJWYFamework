@@ -1,7 +1,7 @@
 ﻿
 using UnityEngine;
 using UnityEngine.UI;
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
 
     [RequireComponent(typeof(RectTransform))]

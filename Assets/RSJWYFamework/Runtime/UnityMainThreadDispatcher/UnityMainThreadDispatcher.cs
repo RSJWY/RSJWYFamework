@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using RSJWYFamework.Runtime;
 
-namespace RSJWYFamework.Runtiem
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 主线程执行器
