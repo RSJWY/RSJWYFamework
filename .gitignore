@@ -104,3 +104,4 @@ InitTestScene*.unity*
 #忽略YooAsset示例
 /[Aa]ssets/[Ss]amples/[Yy]oo[Aa]sset
 /[Aa]ssets/[Ss]amples/[Yy]oo[Aa]sset.meta
+.idea/.idea.RSJWYFamework/.idea/MarsCodeWorkspaceAppSettings.xml
