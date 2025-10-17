@@ -20,7 +20,7 @@ namespace RSJWYFamework.Runtime
             AppLogger.Log($"加载热更代码流程结束");
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
         }
 

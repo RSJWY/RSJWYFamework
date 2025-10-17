@@ -19,7 +19,7 @@ namespace RSJWYFamework.Runtime
         {
             //获取数据并存入数据
             var projectConfig = ModuleManager.GetModule<DataManager>().GetFirstDataSB<AppConfig>();
-            Utility.YooAsset.Setting(projectConfig.hostServerIP, projectConfig.ProjectName, projectConfig.APPName, projectConfig.Version);
+            Utility.YooAsset.Setting(projectConfig.hostServerIP, projectConfig.ProjectName, projectConfig.APPName, projectConfig.Version, projectConfig.UpdatePackageVersionNumberOfRetries);
             UniTask[] taskArr=new UniTask[projectConfig.YooAssetPackageData.Count];
             for (int i = 0; i < projectConfig.YooAssetPackageData.Count; i++)
             {

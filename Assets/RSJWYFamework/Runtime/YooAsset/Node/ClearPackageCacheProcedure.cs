@@ -34,7 +34,7 @@ namespace RSJWYFamework.Runtime
         {
            
         }
-        public override  void OnLeave(StateNodeBase lastProcedureBase)
+        public override  void OnLeave(StateNodeBase lastProcedureBase, bool isRestarting = false)
         {;
         }
 

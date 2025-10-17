@@ -22,7 +22,7 @@ namespace RSJWYFamework.Runtime
             _sm.SwitchNode<ClearPackageCacheNode>();
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
         }
 

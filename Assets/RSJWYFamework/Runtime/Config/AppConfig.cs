@@ -14,7 +14,31 @@ namespace RSJWYFamework.Runtime
         [LabelText("软件名")] public string APPName = "测试软件";
         [LabelText("软件版本")] public string Version = "TestV0.1";
 
-        /*
+        [LabelText("日志等级")] public LogLevel Loglevel = LogLevel.Log;
+
+        [Required("请输入加密密钥")] [LabelText("AES加密密钥")]
+        public string AESKey;
+        
+        /// <summary>
+        /// 更新资源包版本重试次数
+        /// </summary>
+        [LabelText("更新资源包版本重试次数")]
+        public int UpdatePackageVersionNumberOfRetries = 3;
+
+#if UNITY_EDITOR
+        [Button("设置项目参数")]
+        public void SetSetting()
+        {
+            PlayerSettings.companyName = ProjectName;
+            PlayerSettings.productName = APPName;
+            PlayerSettings.bundleVersion = Version;
+            Debug.Log("参数设置完成");
+        }
+#endif
+    }
+}
+
+/*
         /// <summary>
         /// 绑定的许可ID
         /// </summary>
@@ -35,21 +59,3 @@ namespace RSJWYFamework.Runtime
             "注意，每个开发者SDK和密钥一一绑定,请使用正确的SDK和开发者密钥，否则程序初始化不通过\n请登录 Virbox 开发者中心(https://developer.lm.virbox.com), 获取 API 密码",
             InfoMessageType.Warning)]
         public string developerPW;*/
-
-        [LabelText("日志等级")] public LogLevel Loglevel = LogLevel.Log;
-
-        [Required("请输入加密密钥")] [LabelText("AES加密密钥")]
-        public string AESKey;
-
-#if UNITY_EDITOR
-        [Button("设置项目参数")]
-        public void SetSetting()
-        {
-            PlayerSettings.companyName = ProjectName;
-            PlayerSettings.productName = APPName;
-            PlayerSettings.bundleVersion = Version;
-            Debug.Log("参数设置完成");
-        }
-#endif
-    }
-}

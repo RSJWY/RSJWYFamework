@@ -22,7 +22,7 @@ namespace RSJWYFamework.Runtime
             AppLogger.Log($"完成包{packageName}更新流程");
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
             
         }

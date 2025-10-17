@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine.SceneManagement;
 using YooAsset;
@@ -27,7 +27,7 @@ namespace RSJWYFamework.Runtime
             _sm.SwitchNode(nextType);
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
             
         }
@@ -221,7 +221,7 @@ namespace RSJWYFamework.Runtime
             AppLogger.Log("流程结束");
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
             
         }

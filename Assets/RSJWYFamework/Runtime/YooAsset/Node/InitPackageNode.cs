@@ -18,7 +18,7 @@ namespace RSJWYFamework.Runtime
             InitPackage().Forget();
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase)
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
         }
 
@@ -42,8 +42,7 @@ namespace RSJWYFamework.Runtime
             AppLogger.Log($"初始化包{packageName} 运行模式{playMode} ");
             // 创建资源包裹类
             var package = YooAssets.TryGetPackage(packageName);
-            if (package == null)
-                package = YooAssets.CreatePackage(packageName);
+            package ??= YooAssets.CreatePackage(packageName);
 
             InitializationOperation initializationOperation = null;
             if (playMode == EPlayMode.EditorSimulateMode)

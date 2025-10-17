@@ -4,18 +4,18 @@ namespace RSJWYFamework.Runtime
 {
     public enum LogLevel
     {
-        None,
-        Exception,
-        Error,
-        Warning,
         Log,
+        Warning,
+        Error,
+        Exception,
+        None,
     }
     public class AppLogger
     {
         /// <summary>
         /// 日志输出等级
         /// </summary>
-        public static LogLevel currentLogLevel = LogLevel.Log;
+        public static LogLevel currentLogLevel = LogLevel.Warning;
 
         [HideInCallstack]
         public static void Log(string info)

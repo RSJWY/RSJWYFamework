@@ -29,7 +29,8 @@ namespace RSJWYFamework.Runtime
         /// 离开当前流程
         /// </summary>
         /// <param name="nextProcedureBase">下一个进入的流程</param>
-        public abstract void OnLeave(StateNodeBase nextProcedureBase);
+        /// <param name="isRestarting">是否为重启操作，默认为false</param>
+        public abstract void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false);
         #endregion 
         #region 虚方法
         /// <summary>
@@ -41,6 +42,21 @@ namespace RSJWYFamework.Runtime
         /// 流程秒更新
         /// </summary>
         public virtual void OnUpdateSecond(){}
+        
+        /// <summary>
+        /// 节点重启回调
+        /// 当状态机重启时调用，在OnLeave和OnEnter之间执行
+        /// </summary>
+        /// <param name="reason">重启原因</param>
+        /// <param name="targetNodeType">重启后的目标节点类型</param>
+        public virtual void OnRestart(string reason, System.Type targetNodeType){}
+        
+        /// <summary>
+        /// 节点停止回调
+        /// 当状态机停止时调用，用于节点的停止处理
+        /// </summary>
+        /// <param name="reason">停止原因</param>
+        public virtual void OnStop(string reason = "状态机停止"){}
         #endregion
         
         #region 状态机控制便捷方法
@@ -71,26 +87,10 @@ namespace RSJWYFamework.Runtime
             {
                 AppLogger.Log($"节点 {GetType().Name} 请求重启状态机，原因：{reason}");
                 
-                // 如果状态机未结束，先终止它
-                if (!_sm.IsTerminated)
-                {
-                    _sm.Terminate($"为重启而终止：{reason}");
-                }
+                // 使用状态机的内部重启方法，支持重启事件和回调
+                _sm.InternalRestart(startNodeType, reason, this);
                 
-                // 重置状态机
-                _sm.Reset();
-                
-                // 重新启动
-                if (startNodeType != null)
-                {
-                    _sm.StartNode(startNodeType);
-                }
-                else
-                {
-                    _sm.StartNode();
-                }
-                
-                AppLogger.Log($"状态机重启成功，起始节点：{startNodeType?.Name ?? "默认第一个节点"}");
+                AppLogger.Log($"状态机重启请求已提交，目标节点：{startNodeType?.Name ?? "默认第一个节点"}");
             }
             catch (System.Exception ex)
             {
@@ -176,6 +176,33 @@ namespace RSJWYFamework.Runtime
         protected void SwitchToNode<TNode>(bool checkTerminated = true) where TNode : StateNodeBase
         {
             SwitchToNode(typeof(TNode), checkTerminated);
+        }
+        
+        /// <summary>
+        /// 停止状态机（便捷方法）
+        /// </summary>
+        /// <param name="reason">停止原因</param>
+        protected void StopStateMachine(string reason = "节点请求停止")
+        {
+            _sm?.Stop(reason);
+        }
+        
+        /// <summary>
+        /// 恢复状态机（便捷方法）
+        /// </summary>
+        /// <param name="reason">恢复原因</param>
+        protected void ResumeStateMachine(string reason = "节点请求恢复")
+        {
+            _sm?.Resume(reason);
+        }
+        
+        /// <summary>
+        /// 检查状态机是否已停止
+        /// </summary>
+        /// <returns>如果状态机已停止返回true，否则返回false</returns>
+        protected bool IsStateMachineStopped()
+        {
+            return _sm?.IsStopped ?? false;
         }
         
         #endregion
