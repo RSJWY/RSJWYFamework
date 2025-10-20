@@ -28,11 +28,42 @@ namespace RSJWYFamework.Runtime
             _smc.AddNode(new DownloadPackageOverNode());
             _smc.AddNode(new ClearPackageCacheNode());
             _smc.AddNode(new UpdaterDoneNode());
+            //检查本地资源版本，弱联网将检查上次下载的版本
+            _smc.AddNode(new CheckLocalAssetsVersion());
+            
             //写入数据
             _smc.SetBlackboardValue("PlayMode",playMode);
             _smc.SetBlackboardValue("PackageName",packageName);
+            
+            //绑定事件
+            _smc.StateMachineTerminatedEvent+=OnStateMachineTerminatedEvent;
             //开始异步任务
             AppAsyncOperationSystem.StartOperation(typeof(LoadPackagesAsyncOperation).FullName, this);
+        }
+        /// <summary>
+        /// 状态机终止事件
+        /// </summary>
+        /// <param name="stateMachine">状态机</param>
+        /// <param name="TerminationReason">终止原因</param>
+        /// <param name="StatusCode">状态码</param>
+        /// <param name="isRestarting">是否重新启动</param>
+        private void OnStateMachineTerminatedEvent(StateMachine stateMachine, string TerminationReason, int StatusCode, bool isRestarting)
+        {
+            if (isRestarting)return;
+            
+            if(stateMachine == _smc)
+            {
+                if(StatusCode==0)
+                {
+                    Status = AppAsyncOperationStatus.Succeed;
+                    _steps = LoadPackageSteps.Done;
+                }
+                else
+                {
+                    Status = AppAsyncOperationStatus.Failed;
+                    _steps = LoadPackageSteps.Done;
+                }
+            }
         }
 
         protected override void OnStart()
@@ -43,7 +74,7 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnUpdate()
         {
-            switch (_steps)
+            /*switch (_steps)
             {
                 case LoadPackageSteps.None:
                 case LoadPackageSteps.Done:
@@ -56,10 +87,14 @@ namespace RSJWYFamework.Runtime
                         Status = AppAsyncOperationStatus.Succeed;
                         _steps = LoadPackageSteps.Done;
                     }
+                    else
+                    {
+                        Status = AppAsyncOperationStatus.Succeed;
+                    }
 
                     break;
                 }
-            }
+            }*/
         }
 
         protected override void OnAbort()

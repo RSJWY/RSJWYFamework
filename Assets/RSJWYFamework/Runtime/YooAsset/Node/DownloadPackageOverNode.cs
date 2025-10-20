@@ -19,7 +19,7 @@ namespace RSJWYFamework.Runtime
         {
             var packageName=(string)_sm.GetBlackboardValue("PackageName");
             AppLogger.Log($"下载包{packageName}新资源完成");
-            _sm.SwitchNode<ClearPackageCacheNode>();
+            SwitchToNode<ClearPackageCacheNode>();
         }
 
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)

@@ -8,9 +8,15 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public class CreatePackageDownloaderNode:StateNodeBase
     {
-        public override  void OnInit()
+        private int _retryCount = 0;
+    
+        public override void OnInit()
         {
+           
+            // 初始化时重置重试计数器
+            _retryCount = 0;
         }
+
 
         public override  void OnClose()
         {
@@ -18,24 +24,22 @@ namespace RSJWYFamework.Runtime
 
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
-            var packageName = (string)_sm.GetBlackboardValue("PackageName");
+            var packageName = (string)GetBlackboardValue("PackageName");
             var package = YooAssets.GetPackage(packageName);
-            int downloadingMaxNum = 10;
-            int failedTryAgain = 3;
-            var downloader = package.CreateResourceDownloader(downloadingMaxNum, failedTryAgain);
-            _sm.SetBlackboardValue("Downloader", downloader);
+            var downloader = package.CreateResourceDownloader(Utility.YooAsset.DownloadingMaxNum, Utility.YooAsset.FailedTryAgainNum);
+            SetBlackboardValue("Downloader", downloader);
 
             if (downloader.TotalDownloadCount == 0)
             {
-                AppLogger.Log($"包{packageName}没找到任何下载文件！");
-                _sm.SwitchNode<UpdaterDoneNode>();
+                AppLogger.Log($"包{packageName}没找到任何需要下载的资源！");
+                SwitchToNode<UpdaterDoneNode>();
             }
             else
             {
                 // 发现新更新文件后，挂起流程系统
                 // 注意：开发者需要在下载前检测磁盘空间不足
                 AppLogger.Log($"包{packageName}发现新文件！下载的文件总量：{downloader.TotalDownloadCount}，总大小：{downloader.TotalDownloadBytes}");
-                _sm.SwitchNode<DownloadPackageFilesNode>();
+                SwitchToNode<DownloadPackageFilesNode>();
             }
         }
 

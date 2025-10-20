@@ -28,6 +28,7 @@ namespace RSJWYFamework.Runtime
                 if (!package.CheckLocationValid("HotUpdateCode_HotList"))
                 {
                     AppLogger.Error("无法加载列表文件");
+                    StopStateMachine($"加载热更代码列表失败",500);
                     return;
                 }
                     
@@ -98,10 +99,10 @@ namespace RSJWYFamework.Runtime
                         AppLogger.Error($"热更获取DLL数据流程，加载资源文件地址：{_dllname}无效");
                     }
                 }
-                _sm.SetBlackboardValue("LoadList",loadLis);
-                _sm.SetBlackboardValue("HotcodeDic",hotCodeBytesMap);
-                _sm.SetBlackboardValue("MFAOTDic",MFAOTbytesMap);
-                _sm.SwitchNode<LoadHotCodeNode>();
+                SetBlackboardValue("LoadList",loadLis);
+                SetBlackboardValue("HotcodeDic",hotCodeBytesMap);
+                SetBlackboardValue("MFAOTDic",MFAOTbytesMap);
+                SwitchToNode<LoadHotCodeNode>();
             });
         }
 

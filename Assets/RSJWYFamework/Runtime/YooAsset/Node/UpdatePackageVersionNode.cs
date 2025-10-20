@@ -6,22 +6,21 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 更新包版本
     /// </summary>
-    public class UpdatePackageVersionNode:StateNodeBase
+    public class UpdatePackageVersionNode:YooAssetNode
     {
-        private int _retryCount = 0;
-        
         public override void OnInit()
         {
-            // 初始化时重置重试计数器
-            _retryCount = 0;
+            base.OnInit();
         }
 
         public override void OnClose()
         {
+            base.OnClose();
         }
 
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
+            base.OnEnter(lastProcedureBase);
             UpdatePackageVersion().Forget();
         }
         
@@ -55,63 +54,34 @@ namespace RSJWYFamework.Runtime
                     await UniTask.WaitForSeconds(1.0f);
                     
                     // 使用状态机重启功能重新执行当前节点
-                    RestartStateMachine<UpdatePackageVersionNode>($"重试更新包版本，第{_retryCount}次重试");
+                    RestartStateMachine<UpdatePackageVersionNode>($"重试更新包版本，第{_retryCount}次重试",400);
                     return;
                 }
                 else
                 {
-                    _sm.SetBlackboardValue("NetworkNormal", false);
+                    SetBlackboardValue("NetworkNormal", false);
                     //_sm.SwitchNode<UpdatePackageManifestNode>();
-                    StopStateMachine($"更新包{packageName}版本失败，已达到最大重试次数({maxRetries})，停止重试");
+                    //StopStateMachine($"更新包{packageName}版本失败，已达到最大重试次数({maxRetries})，停止重试");
                     // 重试次数用完，设置网络异常状态
-                    AppLogger.Error($"更新包{packageName}版本失败，已达到最大重试次数({maxRetries})，停止重试");
+                    AppLogger.Error($"更新包{packageName}版本失败，已达到最大重试次数({maxRetries})，停止重试，将读取上一次缓存的版本");
+                    
+                    SwitchToNode<CheckLocalAssetsVersion>();
                 }
             }
             else
             {
                 // 成功时重置重试计数器
                 _retryCount = 0;
-                _sm.SetBlackboardValue("PackageVersion", operation.PackageVersion);
-                _sm.SetBlackboardValue("NetworkNormal", true);
+                SetBlackboardValue("PackageVersion", operation.PackageVersion);
+                SetBlackboardValue("NetworkNormal", true);
                 AppLogger.Log($"包{packageName}请求到包版本为：{operation.PackageVersion}");
                 SwitchToNode<UpdatePackageManifestNode>();
             }
         }
         
-        /// <summary>
-        /// 判断是否应该重试
-        /// </summary>
-        /// <param name="maxRetries">最大重试次数，-1表示无限重试</param>
-        /// <returns>是否应该重试</returns>
-        private bool ShouldRetry(int maxRetries)
-        {
-            // -1 表示无限重试
-            if (maxRetries == -1)
-            {
-                return true;
-            }
-            
-            // 检查是否还有重试次数
-            return _retryCount < maxRetries;
-        }
-        
-        /// <summary>
-        /// 获取剩余重试次数的描述
-        /// </summary>
-        /// <param name="maxRetries">最大重试次数</param>
-        /// <returns>剩余重试次数描述</returns>
-        private string GetRemainingRetries(int maxRetries)
-        {
-            if (maxRetries == -1)
-            {
-                return "无限";
-            }
-            
-            return (maxRetries - _retryCount).ToString();
-        }
-
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
+            base.OnLeave(nextProcedureBase, isRestarting);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 
 namespace RSJWYFamework.Runtime
 {
@@ -107,7 +108,7 @@ namespace RSJWYFamework.Runtime
                 throw new AppException($"移除状态机失败：状态机 {st_Name} 不存在！");
             }
         }
-        
+
         /// <summary>
         /// 获取一个流程控制器
         /// </summary>
@@ -227,12 +228,16 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="stateMachine">结束的状态机</param>
         /// <param name="reason">结束原因</param>
-        private void OnStateMachineTerminated(StateMachine stateMachine, string reason)
+        /// <param name="stateCode">状态码</param>
+        /// <param name="isRestarting">是否重启</param>
+        private void OnStateMachineTerminated(StateMachine stateMachine, string reason, int stateCode, bool isRestarting)
         {
             if (!AutoCleanupTerminated)
                 return;
-                
-            AppLogger.Log($"状态机 {stateMachine.st_Name} 已结束，原因：{reason}，将在 {CleanupDelayMs}ms 后自动清理");
+            // 如果是重启，不清理
+            if (isRestarting)
+                return;
+            AppLogger.Log($"状态机 {stateMachine.st_Name} 已结束，原因：{reason}，状态码：{stateCode} 将在 {CleanupDelayMs}ms 后自动清理");
             
             // 延迟清理，避免立即清理可能导致的问题
             _ = DelayedCleanup(stateMachine.st_Name);
@@ -242,11 +247,11 @@ namespace RSJWYFamework.Runtime
         /// 延迟清理已结束的状态机
         /// </summary>
         /// <param name="stateMachineName">状态机名称</param>
-        private async System.Threading.Tasks.Task DelayedCleanup(string stateMachineName)
+        private async UniTask DelayedCleanup(string stateMachineName)
         {
             try
             {
-                await System.Threading.Tasks.Task.Delay((int)CleanupDelayMs);
+                await UniTask.Delay((int)CleanupDelayMs);
                 
                 if (StateMachineDic.TryGetValue(stateMachineName, out var stateMachine) && stateMachine.IsTerminated)
                 {
@@ -275,16 +280,16 @@ namespace RSJWYFamework.Runtime
                 }
             }
             
-            foreach (var name in terminatedNames)
+            foreach (var _name in terminatedNames)
             {
                 try
                 {
-                    RemoveStateMachine(name);
-                    AppLogger.Log($"手动清理已结束的状态机：{name}");
+                    RemoveStateMachine(_name);
+                    AppLogger.Log($"手动清理已结束的状态机：{_name}");
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Error($"清理状态机 {name} 时发生错误：{ex.Message}");
+                    AppLogger.Error($"清理状态机 {_name} 时发生错误：{ex.Message}");
                 }
             }
             

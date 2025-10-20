@@ -27,7 +27,7 @@ namespace RSJWYFamework.Runtime
                 var operation = package.ClearCacheFilesAsync(EFileClearMode.ClearUnusedBundleFiles);
                 operation.Completed += Operation_Completed;
                 await operation.ToUniTask();
-                _sm.SwitchNode(typeof(UpdaterDoneNode));
+                SwitchToNode<UpdaterDoneNode>();
             });
         }
         private void Operation_Completed(YooAsset.AsyncOperationBase obj)

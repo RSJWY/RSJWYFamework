@@ -29,7 +29,29 @@ namespace RSJWYFamework.Runtime
             _smc.AddNode(new LoadDLLByteNode());
             _smc.AddNode(new LoadHotCodeNode());
             _smc.AddNode(new LoadHotCodeDoneNode());
+            
+            //绑定事件
+            _smc.StateMachineTerminatedEvent+=OnStateMachineTerminatedEvent;
             AppAsyncOperationSystem.StartOperation(typeof(LoadHotCodeAsyncOperation).FullName,this);
+        }
+
+        private void OnStateMachineTerminatedEvent(StateMachine stateMachine, string TerminationReason, int StatusCode, bool isRestarting)
+        {
+            if (isRestarting)return;
+            
+            if(stateMachine == _smc)
+            {
+                if(StatusCode==0)
+                {
+                    Status = AppAsyncOperationStatus.Succeed;
+                    _steps = LoadHotCodeSteps.Done;
+                }
+                else
+                {
+                    Status = AppAsyncOperationStatus.Failed;
+                    _steps = LoadHotCodeSteps.Done;
+                }
+            }
         }
 
         protected override void OnStart()

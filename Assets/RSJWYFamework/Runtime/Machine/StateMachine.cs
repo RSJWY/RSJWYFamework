@@ -68,19 +68,24 @@ namespace RSJWYFamework.Runtime
         public string StopReason { get; private set; } = string.Empty;
         
         /// <summary>
+        /// 当前状态码（用户自定义状态标识）
+        /// </summary>
+        public int StatusCode { get; private set; } = 0;
+        
+        /// <summary>
         /// 任意节点切换事件（上一个离开的节点、下一个进入的节点）
         /// </summary>
         public event Action<StateNodeBase, StateNodeBase> ProcedureSwitchEvent;
         
         /// <summary>
-        /// 状态机结束事件
+        /// 状态机结束事件（状态机实例、终止原因、状态码、是否重启）
         /// </summary>
-        public event Action<StateMachine, string> StateMachineTerminatedEvent;
+        public event Action<StateMachine, string, int,bool> StateMachineTerminatedEvent;
         
         /// <summary>
-        /// 状态机重启事件（状态机实例、重启原因、重启前的节点、重启后的节点类型）
+        /// 状态机重启事件（状态机实例、重启原因、重启前的节点、重启后的节点类型、状态码）
         /// </summary>
-        public event Action<StateMachine, string, StateNodeBase, Type> StateMachineRestartEvent;
+        public event Action<StateMachine, string, StateNodeBase, Type, int> StateMachineRestartEvent;
         
         /// <summary>
         /// 黑板数据
@@ -231,6 +236,46 @@ namespace RSJWYFamework.Runtime
         {
             blackboard.Clear();
         }
+        
+        /// <summary>
+        /// 删除黑板中的指定键值对
+        /// </summary>
+        /// <param name="key">要删除的键</param>
+        /// <returns>如果成功删除返回true，否则返回false</returns>
+        public bool RemoveBlackboardValue(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                AppLogger.Warning("删除黑板数据时键不能为空");
+                return false;
+            }
+            
+            return blackboard.Remove(key);
+        }
+        
+        /// <summary>
+        /// 检查黑板中是否包含指定键
+        /// </summary>
+        /// <param name="key">要检查的键</param>
+        /// <returns>如果包含该键返回true，否则返回false</returns>
+        public bool HasBlackboardKey(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return false;
+            }
+            
+            return blackboard.ContainsKey(key);
+        }
+        
+        /// <summary>
+        /// 获取黑板中所有键的数量
+        /// </summary>
+        /// <returns>黑板中键值对的数量</returns>
+        public int GetBlackboardCount()
+        {
+            return blackboard.Count;
+        }
 
         #endregion
 
@@ -248,9 +293,9 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 切换到指定节点
         /// </summary>
-        public void SwitchNode<TStateNodeBase>() where TStateNodeBase : StateNodeBase
+        public void SwitchNode<TStateNodeBase>( bool isNextUpadeSwitch = false,int statusCode = 0) where TStateNodeBase : StateNodeBase
         {
-            SwitchNode(typeof(TStateNodeBase), false);
+            SwitchNode(typeof(TStateNodeBase), isNextUpadeSwitch, statusCode);
         }
         
         /// <summary>
@@ -258,8 +303,9 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="type">要切换到的节点类型</param>
         /// <param name="isNextUpadeSwitch">是否在下一帧切换，true为下一帧切换，false为立即切换</param>
+        /// <param name="statusCode">状态码</param>
         /// <exception cref="AppException"></exception>
-        public void SwitchNode(Type type, bool isNextUpadeSwitch = false)
+        public void SwitchNode(Type type, bool isNextUpadeSwitch = false, int statusCode = 0)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), "节点类型不能为空");
@@ -269,6 +315,9 @@ namespace RSJWYFamework.Runtime
                 AppLogger.Warning($"状态机 {st_Name} 已终止，无法切换到节点 {type.Name}");
                 return;
             }
+            
+            // 设置状态码
+            StatusCode = statusCode;
                 
             if (isNextUpadeSwitch)
             {
@@ -278,7 +327,7 @@ namespace RSJWYFamework.Runtime
                     AppLogger.Warning($"覆盖之前的延迟切换请求：{_pendingSwitchType.Name} -> {type.Name}");
                 }
                 _pendingSwitchType = type;
-                AppLogger.Log($"设置延迟切换到节点：{type.Name}，将在下一帧执行");
+                AppLogger.Log($"设置延迟切换到节点：{type.Name}，状态码：{statusCode}，将在下一帧执行");
             }
             else
             {
@@ -496,7 +545,8 @@ namespace RSJWYFamework.Runtime
         /// 自动终止状态机（通常在最终节点中调用）
         /// </summary>
         /// <param name="reason">终止原因</param>
-        public void AutoTerminate(string reason = "流程完成")
+        /// <param name="statusCode">状态码</param>
+        public void AutoTerminate(string reason = "流程完成", int statusCode = 0)
         {
             if (IsTerminated)
             {
@@ -504,8 +554,8 @@ namespace RSJWYFamework.Runtime
                 return;
             }
             
-            AppLogger.Log($"状态机 {st_Name} 自动终止，原因：{reason}");
-            Terminate(reason);
+            AppLogger.Log($"状态机 {st_Name} 自动终止，原因：{reason}，状态码：{statusCode}");
+            Terminate(reason, false, statusCode);
         }
         
         /// <summary>
@@ -513,7 +563,8 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="reason">结束原因</param>
         /// <param name="isRestarting">是否为重启操作</param>
-        public void Terminate(string reason = "手动终止", bool isRestarting = false)
+        /// <param name="statusCode">状态码</param>
+        public void Terminate(string reason = "手动终止", bool isRestarting = false, int statusCode = 0)
         {
             if (IsTerminated)
             {
@@ -523,6 +574,9 @@ namespace RSJWYFamework.Runtime
             
             try
             {
+                // 设置状态码
+                StatusCode = statusCode;
+                
                 // 停止当前节点
                 if (_currentProcedureBase != null)
                 {
@@ -536,10 +590,9 @@ namespace RSJWYFamework.Runtime
                 TerminationReason = reason ?? "未知原因";
                 _currentProcedureBase = null;
                 _pendingSwitchType = null;
-                
+               
                 // 触发结束事件
-                StateMachineTerminatedEvent?.Invoke(this, TerminationReason);
-                
+                StateMachineTerminatedEvent?.Invoke(this, TerminationReason, StatusCode, isRestarting);
                 AppLogger.Log($"状态机 {st_Name} 已终止，原因：{TerminationReason}");
             }
             catch (Exception ex)
@@ -602,24 +655,27 @@ namespace RSJWYFamework.Runtime
         /// <param name="startNodeType">重启后的起始节点类型</param>
         /// <param name="reason">重启原因</param>
         /// <param name="requestingNode">请求重启的节点</param>
-        internal void InternalRestart(System.Type startNodeType, string reason, StateNodeBase requestingNode)
+        internal void InternalRestart(System.Type startNodeType, string reason, StateNodeBase requestingNode, int statusCode = 0)
         {
             try
             {
                 var previousNode = _currentProcedureBase;
                 var targetNodeType = startNodeType ?? (ProcedureTypes.Count > 0 ? ProcedureTypes[0] : null);
                 
+                // 设置状态码
+                StatusCode = statusCode;
+                
                 // 更新重启统计信息
                 RestartCount++;
                 LastRestartTime = Utility.Timestamp.UnixTimestampMilliseconds;
                 LastRestartReason = reason ?? "未知原因";
                 
-                AppLogger.Log($"状态机 {st_Name} 开始第 {RestartCount} 次重启，原因：{reason}，目标节点：{targetNodeType?.Name ?? "无"}");
+                AppLogger.Log($"状态机 {st_Name} 开始第 {RestartCount} 次重启，原因：{reason}，状态码：{statusCode}，目标节点：{targetNodeType?.Name ?? "无"}，请求重启操作的节点：{requestingNode?.GetType().Name ?? "无"}");
                 
                 // 1. 如果状态机未结束，先终止它（标记为重启操作）
                 if (!IsTerminated)
                 {
-                    Terminate($"为重启而终止：{reason}", true); // 传递true表示这是重启操作
+                    Terminate($"为重启而终止：{reason}", true, statusCode); // 传递true表示这是重启操作
                 }
                 
                 // 2. 调用当前节点的OnRestart回调（如果存在）
@@ -642,7 +698,7 @@ namespace RSJWYFamework.Runtime
                 // 4. 触发重启事件
                 try
                 {
-                    StateMachineRestartEvent?.Invoke(this, reason, previousNode, targetNodeType);
+                    StateMachineRestartEvent?.Invoke(this, reason, previousNode, targetNodeType, StatusCode);
                     AppLogger.Log($"已触发状态机重启事件，重启次数：{RestartCount}");
                 }
                 catch (Exception ex)
@@ -678,7 +734,8 @@ namespace RSJWYFamework.Runtime
         /// 停止状态机（不同于终止，停止是暂停运行但不清除状态）
         /// </summary>
         /// <param name="reason">停止原因</param>
-        public void Stop(string reason = "手动停止")
+        /// <param name="statusCode">状态码</param>
+        public void Stop(string reason = "手动停止", int statusCode = 0)
         {
             if (IsTerminated)
             {
@@ -694,10 +751,11 @@ namespace RSJWYFamework.Runtime
             
             try
             {
-                // 设置停止状态
+                // 设置停止状态和状态码
                 IsStopped = true;
                 StoppedTime = Utility.Timestamp.UnixTimestampMilliseconds;
                 StopReason = reason ?? "未知原因";
+                StatusCode = statusCode;
                 
                 // 调用当前节点的停止方法
                 if (_currentProcedureBase != null)
@@ -706,7 +764,7 @@ namespace RSJWYFamework.Runtime
                     AppLogger.Log($"状态机 {st_Name} 停止时调用了当前节点的OnStop：{_currentProcedureBase.GetType().Name}");
                 }
                 
-                AppLogger.Log($"状态机 {st_Name} 已停止，原因：{reason}");
+                AppLogger.Log($"状态机 {st_Name} 已停止，原因：{reason}，状态码：{statusCode}");
             }
             catch (Exception ex)
             {

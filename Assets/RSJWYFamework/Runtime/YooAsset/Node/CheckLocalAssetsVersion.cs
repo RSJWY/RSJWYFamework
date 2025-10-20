@@ -1,0 +1,68 @@
+using System;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using YooAsset;
+
+namespace RSJWYFamework.Runtime
+{
+    /// <summary>
+    /// 检查本地资源包版本是否与服务器版本一致，以应对弱联网
+    /// </summary>
+    public class CheckLocalAssetsVersion:StateNodeBase
+    {
+        public override void OnInit()
+        {
+            
+        }
+
+        public override void OnClose()
+        {
+        }
+
+        public override void OnEnter(StateNodeBase lastProcedureBase)
+        {
+        }
+
+
+        private async UniTask LocalAssetsVersion()
+        {
+            await UniTask.WaitForSeconds(0.5f);
+
+            var packageName = (string)_sm.GetBlackboardValue("PackageName");
+            var modle = (EPlayMode)_sm.GetBlackboardValue("PlayMode");
+            var package = YooAssets.GetPackage(packageName);
+            
+            string version = PlayerPrefs.GetString($"{packageName}_VERSION", string.Empty);
+            if (string.IsNullOrEmpty(version))
+            {
+                AppLogger.Error($"未找到上次初始化的{packageName}的版本号，请检查网络");
+                StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包");
+            }
+            else
+            {
+                AppLogger.Log($"上次初始化的{packageName}的版本号为{version}，尝试加载本地清单");
+                var manifestOp = package.UpdatePackageManifestAsync(version);
+                await manifestOp.ToUniTask();
+                if (manifestOp.Status != EOperationStatus.Succeed)
+                {
+                    AppLogger.Error($"加载包{packageName}版本{version}清单失败！Error：{manifestOp.Error}");
+                    StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包");
+                }
+                else
+                {
+                    AppLogger.Log($"加载包{packageName}版本{version}本地清单成功！检查资源完整性");
+                    var downloader = package.CreateResourceDownloader(Utility.YooAsset.DownloadingMaxNum, Utility.YooAsset.FailedTryAgainNum);
+                    if (downloader.TotalDownloadCount > 0)   
+                    {
+                        AppLogger.Error($"包{packageName}版本{version}有{downloader.TotalDownloadCount}个资源上次未完成下载，本地内容不完整，请连接网络以进行完整下载");
+                        StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包",500);
+                    }
+                }
+            }
+        }
+
+        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
+        {
+        }
+    }
+}

@@ -65,9 +65,10 @@ namespace RSJWYFamework.Runtime
         /// 终止状态机（便捷方法）
         /// </summary>
         /// <param name="reason">终止原因</param>
-        protected void TerminateStateMachine(string reason = "节点请求终止")
+        /// <param name="statusCode">状态码</param>
+        protected void TerminateStateMachine(string reason = "节点请求终止", int statusCode = 0)
         {
-            _sm?.AutoTerminate(reason);
+            _sm?.AutoTerminate(reason, statusCode);
         }
         
         /// <summary>
@@ -75,7 +76,8 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="startNodeType">重启后的起始节点类型，如果为null则使用第一个节点</param>
         /// <param name="reason">重启原因</param>
-        protected void RestartStateMachine(System.Type startNodeType = null, string reason = "节点请求重启")
+        /// <param name="statusCode">状态码</param>
+        protected void RestartStateMachine(System.Type startNodeType = null, string reason = "节点请求重启", int statusCode = 0)
         {
             if (_sm == null)
             {
@@ -85,10 +87,10 @@ namespace RSJWYFamework.Runtime
             
             try
             {
-                AppLogger.Log($"节点 {GetType().Name} 请求重启状态机，原因：{reason}");
+                AppLogger.Log($"节点 {GetType().Name} 请求重启状态机，原因：{reason}，状态码：{statusCode}");
                 
                 // 使用状态机的内部重启方法，支持重启事件和回调
-                _sm.InternalRestart(startNodeType, reason, this);
+                _sm.InternalRestart(startNodeType, reason, this, statusCode);
                 
                 AppLogger.Log($"状态机重启请求已提交，目标节点：{startNodeType?.Name ?? "默认第一个节点"}");
             }
@@ -105,9 +107,10 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <typeparam name="TNode">目标节点类型</typeparam>
         /// <param name="reason">重启原因</param>
-        protected void RestartStateMachine<TNode>(string reason = "节点请求重启") where TNode : StateNodeBase
+        /// <param name="statusCode">状态码</param>
+        protected void RestartStateMachine<TNode>(string reason = "节点请求重启", int statusCode = 0) where TNode : StateNodeBase
         {
-            RestartStateMachine(typeof(TNode), reason);
+            RestartStateMachine(typeof(TNode), reason, statusCode);
         }
         
         /// <summary>
@@ -151,7 +154,9 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="nodeType">目标节点类型</param>
         /// <param name="checkTerminated">是否检查终止状态，默认为true</param>
-        protected void SwitchToNode(System.Type nodeType, bool checkTerminated = true)
+        /// <param name="statusCode">状态码</param>
+        /// <param name="isNextUpadeSwitch">是否在下一帧更新时切换节点，默认为false</param>
+        protected void SwitchToNode(System.Type nodeType, bool isNextUpadeSwitch = false, bool checkTerminated = true, int statusCode = 0)
         {
             if (_sm == null)
             {
@@ -165,7 +170,7 @@ namespace RSJWYFamework.Runtime
                 return;
             }
             
-            _sm.SwitchNode(nodeType);
+            _sm.SwitchNode(nodeType, isNextUpadeSwitch, statusCode);
         }
         
         /// <summary>
@@ -173,18 +178,20 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <typeparam name="TNode">目标节点类型</typeparam>
         /// <param name="checkTerminated">是否检查终止状态，默认为true</param>
-        protected void SwitchToNode<TNode>(bool checkTerminated = true) where TNode : StateNodeBase
+        /// <param name="statusCode">状态码</param>
+        protected void SwitchToNode<TNode>(bool isNextUpadeSwitch = false,bool checkTerminated = true, int statusCode = 0) where TNode : StateNodeBase
         {
-            SwitchToNode(typeof(TNode), checkTerminated);
+            SwitchToNode(typeof(TNode), isNextUpadeSwitch, checkTerminated, statusCode);
         }
         
         /// <summary>
         /// 停止状态机（便捷方法）
         /// </summary>
         /// <param name="reason">停止原因</param>
-        protected void StopStateMachine(string reason = "节点请求停止")
+        /// <param name="statusCode">状态码</param>
+        protected void StopStateMachine(string reason = "节点请求停止", int statusCode = 0)
         {
-            _sm?.Stop(reason);
+            _sm?.Stop(reason, statusCode);
         }
         
         /// <summary>
@@ -203,6 +210,74 @@ namespace RSJWYFamework.Runtime
         protected bool IsStateMachineStopped()
         {
             return _sm?.IsStopped ?? false;
+        }
+        
+        /// <summary>
+        /// 获取黑板数据
+        /// </summary>
+        /// <param name="key">键</param>
+        /// <returns>对应的值，如果不存在则返回null</returns>
+        protected object GetBlackboardValue(string key)
+        {
+            return _sm?.GetBlackboardValue(key);
+        }
+        
+        /// <summary>
+        /// 获取黑板数据（泛型版本）
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="key">键</param>
+        /// <returns>对应的值，如果不存在或类型不匹配则返回默认值</returns>
+        protected T GetBlackboardValue<T>(string key)
+        {
+            return _sm != null ? _sm.GetBlackboardValue<T>(key) : default(T);
+        }
+        
+        /// <summary>
+        /// 设置黑板数据
+        /// </summary>
+        /// <param name="key">键</param>
+        /// <param name="value">值</param>
+        protected void SetBlackboardValue(string key, object value)
+        {
+            _sm?.SetBlackboardValue(key, value);
+        }
+        
+        /// <summary>
+        /// 删除黑板中的指定键值对
+        /// </summary>
+        /// <param name="key">要删除的键</param>
+        /// <returns>如果成功删除返回true，否则返回false</returns>
+        protected bool RemoveBlackboardValue(string key)
+        {
+            return _sm?.RemoveBlackboardValue(key) ?? false;
+        }
+        
+        /// <summary>
+        /// 检查黑板中是否包含指定键
+        /// </summary>
+        /// <param name="key">要检查的键</param>
+        /// <returns>如果包含该键返回true，否则返回false</returns>
+        protected bool HasBlackboardKey(string key)
+        {
+            return _sm?.HasBlackboardKey(key) ?? false;
+        }
+        
+        /// <summary>
+        /// 清空黑板数据
+        /// </summary>
+        protected void ClearBlackboard()
+        {
+            _sm?.ClearBlackboard();
+        }
+        
+        /// <summary>
+        /// 获取黑板中所有键的数量
+        /// </summary>
+        /// <returns>黑板中键值对的数量</returns>
+        protected int GetBlackboardCount()
+        {
+            return _sm?.GetBlackboardCount() ?? 0;
         }
         
         #endregion
