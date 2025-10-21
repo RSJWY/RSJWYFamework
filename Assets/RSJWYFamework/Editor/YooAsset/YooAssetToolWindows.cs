@@ -192,13 +192,6 @@ namespace RSJWYFamework.Editor
 
             return buildResult;
         }
-        [MenuItem("RSJWYFamework/打开YooAsset资源构建工具")]
-        public static void OpenYooAssetBuildWindowsA()
-        {
-            var _windows = OdinEditorWindow.GetWindow<YooAssetToolWindows>();
-            _windows.titleContent = new GUIContent("YooAsset资源构建工具");
-            _windows.Show();
-        }
         [Button("获取包名",ButtonSizes.Large)]
         [BoxGroup("包列表")]
         public void GetAppConfigToPackageData()
@@ -231,6 +224,15 @@ namespace RSJWYFamework.Editor
                 packageDataList.Add(_package);
             }
             AppLogger.Log("载入上次配置的构建管线");
+        }
+
+        
+        [MenuItem("RSJWYFamework/打开YooAsset资源构建工具")]
+        public static void OpenYooAssetBuildWindowsA()
+        {
+            var _windows = OdinEditorWindow.GetWindow<YooAssetToolWindows>();
+            _windows.titleContent = new GUIContent("YooAsset资源构建工具");
+            _windows.Show();
         }
         protected override void OnEnable()
         {

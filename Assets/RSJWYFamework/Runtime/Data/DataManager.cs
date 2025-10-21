@@ -6,7 +6,8 @@ using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
-    [Module]
+    [Module][ModuleDependency(typeof(AppAsyncOperationSystem))]
+    [ModuleDependency(typeof(EventManager))]
     public class DataManager:ModuleBase
     {
          /// <summary>

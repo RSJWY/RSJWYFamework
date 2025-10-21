@@ -29,6 +29,26 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private static readonly object _lifeLock = new object();
 
+        /// <summary>
+        /// 是否启用性能监控
+        /// </summary>
+        public static bool EnablePerformanceMonitoring { get; set; } = 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            true;
+#else
+            false;
+#endif
+
+        /// <summary>
+        /// 是否启用详细日志
+        /// </summary>
+        public static bool EnableVerboseLogging { get; set; } = 
+#if UNITY_EDITOR
+            true;
+#else
+            false;
+#endif
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoRegisterModules()
         {
@@ -43,18 +63,41 @@ namespace RSJWYFamework.Runtime
                 _manager.AddComponent<ModuleManager>();
                 DontDestroyOnLoad( _manager );
                 
+                // 初始化依赖解析器
+                ModuleDependencyResolver.Initialize();
+                
+                // 验证依赖关系
+                if (!ModuleDependencyResolver.ValidateDependencies())
+                {
+                    throw new AppException("检测到模块循环依赖，初始化终止！");
+                }
+                
                 // 扫描所有程序集
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         
-                // 模块注册
-                var moduleTypes = assemblies
+                // 获取所有模块类型
+                var allModuleTypes = assemblies
                     .SelectMany(a => a.GetTypes())
                     .Where(t=> t.IsDefined(typeof(ModuleAttribute), false) &&
                                   typeof(IModule).IsAssignableFrom(t) &&
                                   !t.IsAbstract &&
                                   !t.IsInterface &&
-                                  !t.IsGenericType); 
-                foreach (var type in moduleTypes)
+                                  !t.IsGenericType)
+                    .ToList();
+                
+                // 按依赖顺序获取模块类型
+                var orderedModuleTypes = ModuleDependencyResolver.GetOrderedModuleTypes()
+                    .Where(t => allModuleTypes.Contains(t))
+                    .ToList();
+                
+                // 添加没有依赖关系的模块
+                var remainingModules = allModuleTypes.Except(orderedModuleTypes).ToList();
+                orderedModuleTypes.AddRange(remainingModules);
+                
+                AppLogger.Log($"模块初始化顺序：{string.Join(" -> ", orderedModuleTypes.Select(t => t.Name))}");
+                
+                // 按正确顺序注册模块
+                foreach (var type in orderedModuleTypes)
                 {
                     IModule moduleInstance;
                     // 检查是否为MonoBehaviour
@@ -172,11 +215,15 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public static void RemoveModule(Type type)
         {
-            if (Modules.Remove(type))
+            if (Modules.TryGetValue(type, out var module))
             {
-                AppLogger.Log($"移除模块：{type.Name}");
-                RemoveLife(Modules[type]);
+                // 先调用模块的Shutdown方法
+                module.Shutdown();
+                // 从生命周期中移除
+                RemoveLife(module);
+                // 从模块字典中移除
                 Modules.Remove(type);
+                AppLogger.Log($"移除模块：{type.Name}");
             }
             else
             {
@@ -209,6 +256,7 @@ namespace RSJWYFamework.Runtime
             {
                 //Lifes.Add(life);
                 _pendingLifeAdds.Enqueue(life);
+                _needSync = true; // 标记需要同步
             }
             AppLogger.Log($"添加生命周期对象：{life.GetType().Name}");
         }
@@ -219,18 +267,19 @@ namespace RSJWYFamework.Runtime
         /// <param name="life"></param>
         public static void RemoveLife([NotNull]ILife life)
         {
-            if (Lifes.Contains(life))
+            if (life == null) throw new ArgumentNullException(nameof(life));
+            
+            lock (_lifeLock)
             {
-                lock (_lifeLock)
+                if (Lifes.Remove(life))
                 {
-                    //Lifes.Remove(life);
-                    _pendingLifeAdds.Enqueue(life);
+                    _needSync = true; // 标记需要同步
+                    AppLogger.Log($"移除生命周期对象：{life.GetType().Name}");
                 }
-                AppLogger.Log($"移除生命周期对象：{life.GetType().Name}");
-            }
-            else
-            {
-                AppLogger.Warning($"生命周期对象 {life.GetType().Name} 不存在，无法移除。");
+                else
+                {
+                    AppLogger.Warning($"生命周期对象 {life.GetType().Name} 不存在，无法移除。");
+                }
             }
         }
         /// <summary>
@@ -252,51 +301,243 @@ namespace RSJWYFamework.Runtime
         #region 生命周期
         private float timer = 0f;
         private float timerUnscaleTime = 0f;
+        private static bool _needSync = false;
 
         private void Update()
         {
             timer += Time.deltaTime;
-            timerUnscaleTime+= Time.unscaledDeltaTime
-                ;
-            SyncToActiveList();
-            foreach (var life in Lifes)
+            timerUnscaleTime += Time.unscaledDeltaTime;
+            
+            // 只在需要时同步，减少锁竞争
+            if (_needSync)
             {
-                life.LifeUpdate();
+                SyncToActiveList();
+                _needSync = false;
             }
+            
+            // 创建生命周期对象的快照，确保线程安全
+            ILife[] lifeSnapshot;
+            lock (_lifeLock)
+            {
+                lifeSnapshot = Lifes.ToArray();
+            }
+            
+            // 安全执行生命周期回调
+            ExecuteLifeUpdate(lifeSnapshot);
+            
             if (timer >= 1f)
             {
-                foreach (var life in Lifes)
-                {
-                    life.LifePerSecondUpdate();
-                }
+                ExecuteLifePerSecondUpdate(lifeSnapshot);
                 timer -= 1f; // 减去1秒，保留余数
             }
             
+            // 处理不受时间缩放影响的每秒更新
+            if (timerUnscaleTime >= 1f)
+            {
+                ExecuteLifePerSecondUpdateUnScaleTime(lifeSnapshot);
+                timerUnscaleTime -= 1f;
+            }
+        }
+        
+        /// <summary>
+        /// 安全执行LifeUpdate方法
+        /// </summary>
+        private static void ExecuteLifeUpdate(ILife[] lifeSnapshot)
+        {
+            for (int i = 0; i < lifeSnapshot.Length; i++)
+            {
+                var life = lifeSnapshot[i];
+                try
+                {
+                    if (EnablePerformanceMonitoring)
+                    {
+                        var key = $"{life.GetType().Name}.LifeUpdate";
+                        ModulePerformanceMonitor.StartTimer(key);
+                        life.LifeUpdate();
+                        ModulePerformanceMonitor.EndTimer(key);
+                    }
+                    else
+                    {
+                        life.LifeUpdate();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 在执行 LifeUpdate 时发生异常", ex));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 安全执行LifePerSecondUpdate方法
+        /// </summary>
+        private static void ExecuteLifePerSecondUpdate(ILife[] lifeSnapshot)
+        {
+            for (int i = 0; i < lifeSnapshot.Length; i++)
+            {
+                var life = lifeSnapshot[i];
+                try
+                {
+                    if (EnablePerformanceMonitoring)
+                    {
+                        var key = $"{life.GetType().Name}.LifePerSecondUpdate";
+                        ModulePerformanceMonitor.StartTimer(key);
+                        life.LifePerSecondUpdate();
+                        ModulePerformanceMonitor.EndTimer(key);
+                    }
+                    else
+                    {
+                        life.LifePerSecondUpdate();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 在执行 LifePerSecondUpdate 时发生异常", ex));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 安全执行LifePerSecondUpdateUnScaleTime方法
+        /// </summary>
+        private static void ExecuteLifePerSecondUpdateUnScaleTime(ILife[] lifeSnapshot)
+        {
+            for (int i = 0; i < lifeSnapshot.Length; i++)
+            {
+                var life = lifeSnapshot[i];
+                try
+                {
+                    if (EnablePerformanceMonitoring)
+                    {
+                        var key = $"{life.GetType().Name}.LifePerSecondUpdateUnScaleTime";
+                        ModulePerformanceMonitor.StartTimer(key);
+                        life.LifePerSecondUpdateUnScaleTime();
+                        ModulePerformanceMonitor.EndTimer(key);
+                    }
+                    else
+                    {
+                        life.LifePerSecondUpdateUnScaleTime();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 在执行 LifePerSecondUpdateUnScaleTime 时发生异常", ex));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 安全执行LifeFixedUpdate方法
+        /// </summary>
+        private static void ExecuteLifeFixedUpdate(ILife[] lifeSnapshot)
+        {
+            for (int i = 0; i < lifeSnapshot.Length; i++)
+            {
+                var life = lifeSnapshot[i];
+                try
+                {
+                    if (EnablePerformanceMonitoring)
+                    {
+                        var key = $"{life.GetType().Name}.LifeFixedUpdate";
+                        ModulePerformanceMonitor.StartTimer(key);
+                        life.LifeFixedUpdate();
+                        ModulePerformanceMonitor.EndTimer(key);
+                    }
+                    else
+                    {
+                        life.LifeFixedUpdate();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 在执行 LifeFixedUpdate 时发生异常", ex));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 安全执行LifeLateUpdate方法
+        /// </summary>
+        private static void ExecuteLifeLateUpdate(ILife[] lifeSnapshot)
+        {
+            for (int i = 0; i < lifeSnapshot.Length; i++)
+            {
+                var life = lifeSnapshot[i];
+                try
+                {
+                    if (EnablePerformanceMonitoring)
+                    {
+                        var key = $"{life.GetType().Name}.LifeLateUpdate";
+                        ModulePerformanceMonitor.StartTimer(key);
+                        life.LifeLateUpdate();
+                        ModulePerformanceMonitor.EndTimer(key);
+                    }
+                    else
+                    {
+                        life.LifeLateUpdate();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 在执行 LifeLateUpdate 时发生异常", ex));
+                }
+            }
         }
 
         private void FixedUpdate()
         {
-            SyncToActiveList();
-            foreach (var life in Lifes)
+            // 只在需要时同步，减少锁竞争
+            if (_needSync)
             {
-                life.LifeFixedUpdate();
+                SyncToActiveList();
+                _needSync = false;
             }
+            
+            // 创建生命周期对象的快照，确保线程安全
+            ILife[] lifeSnapshot;
+            lock (_lifeLock)
+            {
+                lifeSnapshot = Lifes.ToArray();
+            }
+            
+            ExecuteLifeFixedUpdate(lifeSnapshot);
         }
         
         private void LateUpdate()
         {
-            SyncToActiveList();
-            foreach (var life in Lifes)
+            // 只在需要时同步，减少锁竞争
+            if (_needSync)
             {
-                life.LifeLateUpdate();
+                SyncToActiveList();
+                _needSync = false;
             }
+            
+            // 创建生命周期对象的快照，确保线程安全
+            ILife[] lifeSnapshot;
+            lock (_lifeLock)
+            {
+                lifeSnapshot = Lifes.ToArray();
+            }
+            
+            ExecuteLifeLateUpdate(lifeSnapshot);
         }
 
         private void OnApplicationQuit()
         {
-            foreach (var module in Modules)
+            // 按照优先级倒序关闭模块，确保依赖关系正确
+            var moduleList = Modules.Values.ToList();
+            moduleList.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            
+            foreach (var module in moduleList)
             {
-                module.Value.Shutdown();
+                try
+                {
+                    module.Shutdown();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {module.GetType().Name} 关闭时发生异常", ex));
+                }
             }
         }
 

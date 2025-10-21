@@ -5,6 +5,9 @@ using YooAsset;
 namespace RSJWYFamework.Runtime
 {
     [Module()]
+    [ModuleDependency(typeof(StateMachineManager))][ModuleDependency(typeof(AppAsyncOperationSystem))]
+    [ModuleDependency(typeof(DataManager))][ModuleDependency(typeof(EventManager))]
+    [ModuleDependency(typeof(EventManager))]
     public class YooAssetManager:ModuleBase
     {
         /// <summary>

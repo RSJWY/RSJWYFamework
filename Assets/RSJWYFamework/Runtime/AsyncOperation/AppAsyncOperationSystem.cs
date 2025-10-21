@@ -63,7 +63,7 @@ namespace RSJWYFamework.Runtime
                 if (operation.IsFinish)
                 {
                     _operations.RemoveAt(i);
-                    operation.ClearCompleted();
+                    operation.ClearCompletedCallback();
                 }
             }
 
@@ -115,37 +115,14 @@ namespace RSJWYFamework.Runtime
             MaxTimeSlice = long.MaxValue;
         }
 
-        /// <summary>
-        /// 销毁包裹的所有任务
-        /// </summary>
-        public static void ClearPackageOperation(string packageName)
-        {
-            // 终止临时队列里的任务
-            foreach (var operation in _newList)
-            {
-                if (operation.PackageName == packageName)
-                {
-                    operation.AbortOperation();
-                }
-            }
-
-            // 终止正在进行的任务
-            foreach (var operation in _operations)
-            {
-                if (operation.PackageName == packageName)
-                {
-                    operation.AbortOperation();
-                }
-            }
-        }
+       
 
         /// <summary>
         /// 开始处理异步操作类
         /// </summary>
-        public static void StartOperation(string packageName, AppAsyncOperationBase operation)
+        public static void StartOperation(AppAsyncOperationBase operation)
         {
             _newList.Add(operation);
-            operation.SetPackageName(packageName);
             operation.StartOperation();
         }
 

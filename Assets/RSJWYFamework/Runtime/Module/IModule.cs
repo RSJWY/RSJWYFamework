@@ -1,4 +1,4 @@
-﻿namespace RSJWYFamework.Runtime
+namespace RSJWYFamework.Runtime
 {
     /// <summary>
     /// 模块接口

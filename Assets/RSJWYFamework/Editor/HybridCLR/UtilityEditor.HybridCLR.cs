@@ -139,8 +139,9 @@ namespace RSJWYFamework.Editor
             /// </summary>
             public static void GenerateDLLJson(HotCodeDLL hotCodeDLL, string GeneratedHotUpdateDLLJsonPath)
             {
-                Utility.FileAndFolder.EnsureDirectoryExists(
-                    Utility.FileAndFolder.GetDirectoryPath(GeneratedHotUpdateDLLJsonPath));
+                //Utility.FileAndFolder.EnsureDirectoryExists(
+                  //  Utility.FileAndFolder.GetDirectoryPath(GeneratedHotUpdateDLLJsonPath));
+                Utility.FileAndFolder.EnsureFileExists(GeneratedHotUpdateDLLJsonPath);
                 File.WriteAllText(GeneratedHotUpdateDLLJsonPath, JsonConvert.SerializeObject(hotCodeDLL));
                 AssetDatabase.Refresh();
             }

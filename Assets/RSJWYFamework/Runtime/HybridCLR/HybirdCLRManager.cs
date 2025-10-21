@@ -7,6 +7,9 @@ namespace RSJWYFamework.Runtime
     /// 热更管理器
     /// </summary>
     [Module()]
+    [ModuleDependency(typeof(YooAssetManager))][ModuleDependency(typeof(StateMachineManager))]
+    [ModuleDependency(typeof(AppAsyncOperationSystem))][ModuleDependency(typeof(DataManager))]
+    [ModuleDependency(typeof(EventManager))][ModuleDependency(typeof(EventManager))]
     public class HybirdCLRManager:ModuleBase
     {
         /// <summary>

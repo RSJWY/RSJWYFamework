@@ -86,7 +86,13 @@ namespace RSJWYFamework.Editor
 
         
         
-
+        [MenuItem("RSJWYFamework/打开热更新系统工具")]
+        public static void OpenHybridCLRToolWindows()
+        {
+            var _windows = OdinEditorWindow.GetWindow<HybridCLRToolWindows>();
+            _windows.Show();
+            _windows.titleContent = new GUIContent("热更新系统工具");
+        }
 
         protected override void OnEnable()
         {
@@ -110,12 +116,6 @@ namespace RSJWYFamework.Editor
             HotUpdateDll = JsonConvert.DeserializeObject<HotCodeDLL>(File.ReadAllText(hotcodedllJson));
         }
         
-        [MenuItem("RSJWYFamework/打开热更新系统工具")]
-        public static void OpenHybridCLRToolWindows()
-        {
-            var _windows = OdinEditorWindow.GetWindow<HybridCLRToolWindows>();
-            _windows.Show();
-            _windows.titleContent = new GUIContent("热更新系统工具");
-        }
+       
     }
 }

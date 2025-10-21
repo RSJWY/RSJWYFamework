@@ -15,7 +15,6 @@ namespace RSJWYFamework.Runtime
     {
         
         private Action<AppAsyncOperationBase> _callback;
-        private string _packageName = null;
         private int _whileFrame = 1000;
 
         /// <summary>
@@ -53,16 +52,6 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public float Progress { get; protected set; }
 
-        /// <summary>
-        /// 所属包裹名称
-        /// </summary>
-        public string PackageName
-        {
-            get
-            {
-                return _packageName;
-            }
-        }
 
         /// <summary>
         /// 是否已经完成
@@ -114,15 +103,6 @@ namespace RSJWYFamework.Runtime
         {
             _utcs.TrySetException(ex);
         }
-
-        /// <summary>
-        /// 设置包裹名称
-        /// </summary>
-        internal void SetPackageName(string packageName)
-        {
-            _packageName = packageName;
-        }
-
         /// <summary>
         /// 添加子任务
         /// </summary>
@@ -216,33 +196,6 @@ namespace RSJWYFamework.Runtime
         }
 
         /// <summary>
-        /// 清理
-        /// </summary>
-        internal void ClearCompleted()
-        {
-            _callback = null;
-        }
-
-        /// <summary>
-        /// 等待异步执行完毕
-        /// 异步操作转换为同步执行，强制当前线程等待直到操作完成，使用时需注意！！！
-        /// </summary>
-        public void WaitForAsyncComplete()
-        {
-            if (IsDone)
-                return;
-
-            //TODO 防止异步操作被挂起陷入无限死循环！
-            // 例如：文件解压任务或者文件导入任务！
-            if (Status == AppAsyncOperationStatus.None)
-            {
-                StartOperation();
-            }
-
-            IsWaitForAsyncComplete = true;
-            InternalWaitForAsyncComplete();
-        }
-        /// <summary>
         /// 执行While循环
         /// 为内部实现，可考虑加到InternalWaitForAsyncComplete中
         /// </summary>
@@ -264,6 +217,39 @@ namespace RSJWYFamework.Runtime
             }
             return IsDone;
         }
+        /// <summary>
+        /// 清理
+        /// </summary>
+        internal void ClearCompletedCallback()
+        {
+            _callback = null;
+        }
+
+        /// <summary>
+        /// 等待异步执行完毕
+        /// <remarks>
+        /// 注意：如果异步操作在等待时被取消，会抛出OperationCanceledException异常
+        /// </remarks>
+        /// </summary>
+        public void WaitForAsyncComplete()
+        {
+            if (IsDone)
+                return;
+
+            //TODO 防止异步操作被挂起陷入无限死循环！
+            // 例如：文件解压任务或者文件导入任务！
+            if (Status == AppAsyncOperationStatus.None)
+            {
+                StartOperation();
+            }
+
+            if (IsWaitForAsyncComplete == false)
+            {
+                IsWaitForAsyncComplete = true;
+                InternalWaitForAsyncComplete();
+            }
+        }
+        
 
         #region 调试信息
         /// <summary>
