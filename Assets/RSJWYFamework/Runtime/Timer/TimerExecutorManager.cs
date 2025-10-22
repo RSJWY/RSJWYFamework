@@ -17,36 +17,41 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 所有活跃的定时任务
         /// </summary>
-        private readonly Dictionary<string, ITimerTask> _activeTasks = new Dictionary<string, ITimerTask>();
+        private static readonly Dictionary<string, TimerTaskBase> _activeTasks = new Dictionary<string, TimerTaskBase>();
         
         /// <summary>
         /// 待添加的任务队列
         /// </summary>
-        private readonly Queue<ITimerTask> _pendingTasks = new Queue<ITimerTask>();
+        private static readonly Queue<TimerTaskBase> _pendingTasks = new Queue<TimerTaskBase>();
         
         /// <summary>
         /// 待移除的任务ID列表
         /// </summary>
-        private readonly List<string> _tasksToRemove = new List<string>();
+        private static readonly List<string> _tasksToRemove = new List<string>();
         
         /// <summary>
         /// 线程锁
         /// </summary>
-        private readonly object _lock = new object();
+        private static readonly object _lock = new object();
         
         /// <summary>
         /// 是否启用详细日志
         /// </summary>
-        public bool EnableVerboseLogging { get; set; } = false;
+        public static bool EnableVerboseLogging { get; set; } = false;
         
         /// <summary>
         /// 当前活跃任务数量
         /// </summary>
-        public int ActiveTaskCount => _activeTasks.Count;
+        public static int ActiveTaskCount => _activeTasks.Count;
 
         public override void Initialize()
         {
-            AppLogger.Log("定时任务执行器初始化完成");
+            lock (_lock)
+            {
+                _activeTasks.Clear();
+                _pendingTasks.Clear();
+                _tasksToRemove.Clear();
+            }
         }
 
         public override void Shutdown()
@@ -60,8 +65,6 @@ namespace RSJWYFamework.Runtime
                 _pendingTasks.Clear();
                 _tasksToRemove.Clear();
             }
-            
-            AppLogger.Log("定时任务执行器已关闭");
         }
 
         public override void LifeUpdate()
@@ -79,7 +82,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 处理待添加的任务
         /// </summary>
-        private void ProcessPendingTasks()
+        private static void ProcessPendingTasks()
         {
             lock (_lock)
             {
@@ -100,9 +103,9 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 更新任务
         /// </summary>
-        private void UpdateTasks(float deltaTime, bool unscaledTimeUpdate)
+        private static void UpdateTasks(float deltaTime, bool unscaledTimeUpdate)
         {
-            var tasksToExecute = new List<ITimerTask>();
+            var tasksToExecute = new List<TimerTaskBase>();
             
             lock (_lock)
             {
@@ -139,7 +142,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 异步执行任务
         /// </summary>
-        private async UniTaskVoid ExecuteTaskAsync(ITimerTask task)
+        private static async UniTaskVoid ExecuteTaskAsync(TimerTaskBase task)
         {
             try
             {
@@ -160,7 +163,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 移除已完成的任务
         /// </summary>
-        private void RemoveCompletedTasks()
+        private static void RemoveCompletedTasks()
         {
             lock (_lock)
             {
@@ -191,7 +194,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="task">任务实例</param>
         /// <returns>任务ID</returns>
-        public string AddTask(ITimerTask task)
+        public static string AddTask(TimerTaskBase task)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));
@@ -213,7 +216,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="taskName">任务名称</param>
         /// <param name="useUnscaledTime">是否使用不受时间缩放影响的时间</param>
         /// <returns>任务ID</returns>
-        public string DelayCall(Action action, float delayTime, string taskName = null, bool useUnscaledTime = false)
+        public static string DelayCall(Action action, float delayTime, string taskName = null, bool useUnscaledTime = false)
         {
             var task = new ActionTimerTask(action, taskName, delayTime, 0f, 1, useUnscaledTime);
             return AddTask(task);
@@ -229,7 +232,7 @@ namespace RSJWYFamework.Runtime
         /// <param name="taskName">任务名称</param>
         /// <param name="useUnscaledTime">是否使用不受时间缩放影响的时间</param>
         /// <returns>任务ID</returns>
-        public string RepeatCall(Action action, float delayTime, float intervalTime, int maxExecuteCount = -1, 
+        public static string RepeatCall(Action action, float delayTime, float intervalTime, int maxExecuteCount = -1, 
             string taskName = null, bool useUnscaledTime = false)
         {
             var task = new ActionTimerTask(action, taskName, delayTime, intervalTime, maxExecuteCount, useUnscaledTime);
@@ -241,7 +244,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="taskId">任务ID</param>
         /// <returns>是否成功取消</returns>
-        public bool CancelTask(string taskId)
+        public static bool CancelTask(string taskId)
         {
             lock (_lock)
             {
@@ -262,7 +265,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="taskName">任务名称</param>
         /// <returns>取消的任务数量</returns>
-        public int CancelTasksByName(string taskName)
+        public static int CancelTasksByName(string taskName)
         {
             int cancelledCount = 0;
             
@@ -285,7 +288,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 取消所有任务
         /// </summary>
-        public void CancelAllTasks()
+        public static void CancelAllTasks()
         {
             int cancelledCount = 0;
             
@@ -310,7 +313,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="taskId">任务ID</param>
         /// <returns>是否存在</returns>
-        public bool HasTask(string taskId)
+        public static bool HasTask(string taskId)
         {
             lock (_lock)
             {
@@ -323,7 +326,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="taskId">任务ID</param>
         /// <returns>任务实例，如果不存在则返回null</returns>
-        public ITimerTask GetTask(string taskId)
+        public static TimerTaskBase GetTask(string taskId)
         {
             lock (_lock)
             {
@@ -336,7 +339,7 @@ namespace RSJWYFamework.Runtime
         /// 获取所有活跃任务的信息
         /// </summary>
         /// <returns>任务信息列表</returns>
-        public List<ITimerTask> GetAllActiveTasks()
+        public static List<TimerTaskBase> GetAllActiveTasks()
         {
             lock (_lock)
             {

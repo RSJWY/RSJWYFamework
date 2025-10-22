@@ -8,23 +8,59 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 定时任务基类
     /// </summary>
-    public abstract class TimerTaskBase : ITimerTask
+    public abstract class TimerTaskBase
     {
         private CancellationTokenSource _cancellationTokenSource;
         private float _currentTime;
         private bool _isFirstExecution = true;
-        
+        /// <summary>
+        /// 任务ID
+        /// </summary>
         public string TaskId { get; private set; }
+        /// <summary>
+        /// 任务名称
+        /// </summary>
         public string TaskName { get; protected set; }
+        /// <summary>
+        /// 任务优先级
+        /// </summary>
         public virtual int Priority { get; protected set; } = 0;
+        /// <summary>
+        /// 延迟执行时间（秒）
+        /// </summary>
         public float DelayTime { get; protected set; }
+        /// <summary>
+        /// 执行间隔时间（秒）
+        /// </summary>
         public float IntervalTime { get; protected set; }
+        
+        /// <summary>
+        /// 最大执行次数
+        /// </summary>
         public int MaxExecuteCount { get; protected set; }
+        /// <summary>
+        /// 当前执行次数
+        /// </summary>
         public int CurrentExecuteCount { get; protected set; }
+        /// <summary>
+        /// 是否使用不受时间缩放影响的时间
+        /// </summary>
         public bool UseUnscaledTime { get; protected set; }
+        /// <summary>
+        /// 是否已完成
+        /// </summary>
         public bool IsCompleted { get; protected set; }
+        /// <summary>
+        /// 是否已取消
+        /// </summary>
         public bool IsCancelled => _cancellationTokenSource?.IsCancellationRequested ?? false;
+        /// <summary>
+        /// 下次执行时间（秒）
+        /// </summary>
         public float NextExecuteTime { get; protected set; }
+        /// <summary>
+        /// 取消令牌
+        /// </summary>
         public CancellationToken CancellationToken => _cancellationTokenSource?.Token ?? default;
 
         protected TimerTaskBase(string taskName = null, float delayTime = 0f, float intervalTime = 0f, 
@@ -41,6 +77,9 @@ namespace RSJWYFamework.Runtime
             Reset();
         }
 
+        /// <summary>
+        /// 重置任务状态
+        /// </summary>
         public virtual void Reset()
         {
             _currentTime = 0f;
@@ -55,7 +94,11 @@ namespace RSJWYFamework.Runtime
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();
         }
-
+        /// <summary>
+        /// 更新任务状态
+        /// </summary>
+        /// <param name="deltaTime"> deltaTime </param>
+        /// <returns> 是否需要执行任务 </returns>
         public virtual bool UpdateTask(float deltaTime)
         {
             if (IsCompleted || IsCancelled)
@@ -72,6 +115,10 @@ namespace RSJWYFamework.Runtime
             return false;
         }
 
+        /// <summary>
+        /// 异步执行任务
+        /// </summary>
+        /// <returns> 任务完成的UniTask </returns>
         public async UniTask ExecuteAsync()
         {
             if (IsCompleted || IsCancelled)
@@ -128,12 +175,18 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         protected abstract UniTask OnExecuteAsync();
 
+        /// <summary>
+        /// 取消任务
+        /// </summary>
         public virtual void Cancel()
         {
             _cancellationTokenSource?.Cancel();
             AppLogger.Log($"定时任务 {TaskName} 已取消");
         }
 
+        /// <summary>
+        /// 释放资源
+        /// </summary>
         public virtual void Dispose()
         {
             Cancel();
