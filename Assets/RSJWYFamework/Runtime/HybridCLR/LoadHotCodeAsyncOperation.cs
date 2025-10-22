@@ -75,7 +75,21 @@ namespace RSJWYFamework.Runtime
                 }
             }
         }
+
+        protected override void OnSecondUpdate()
+        {
+            
+        }
+
         protected override void OnAbort()
+        {
+        }
+
+        protected override void OnSecondUpdateUnScaleTime()
+        {
+        }
+
+        protected override void OnWaitForAsyncComplete()
         {
         }
     }

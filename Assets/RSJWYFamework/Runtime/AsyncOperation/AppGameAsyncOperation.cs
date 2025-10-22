@@ -21,6 +21,17 @@ namespace RSJWYFamework.Runtime
         {
             OnWaitForAsyncComplete();
         }
+        internal override void InternalSecondUpdate()
+        {
+            OnSecondUpdate();
+        }
+        
+        internal override void InternalSecondUnScaleTimeUpdate()
+        {
+            OnSecondUpdateUnScaleTime();
+        }
+
+
 
         /// <summary>
         /// 异步操作开始
@@ -31,16 +42,26 @@ namespace RSJWYFamework.Runtime
         /// 异步操作更新
         /// </summary>
         protected abstract void OnUpdate();
+        /// <summary>
+        /// 异步操作秒更新
+        /// </summary>
+        protected abstract void OnSecondUpdate();
 
         /// <summary>
         /// 异步操作终止
         /// </summary>
         protected abstract void OnAbort();
+        /// <summary>
+        /// 异步操作秒更新（不考虑时间缩放）
+        /// </summary>
+        protected abstract void OnSecondUpdateUnScaleTime();
+
+
 
         /// <summary>
-        /// 异步等待完成
+        /// 同步等待异步等待完成
         /// </summary>
-        protected virtual void OnWaitForAsyncComplete() { }
+        protected abstract void OnWaitForAsyncComplete();
 
         /// <summary>
         /// 异步操作系统是否繁忙

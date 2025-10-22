@@ -141,6 +141,11 @@ namespace RSJWYFamework.Runtime
             
         }
 
+        protected override void OnSecondUpdate()
+        {
+            
+        }
+
         /// <summary>
         /// 暂停下载
         /// </summary>
@@ -183,6 +188,14 @@ namespace RSJWYFamework.Runtime
                 _steps = DownloadFileSteps.Abort;
                 downloadHandlerFile.Close();
             }
+        }
+
+        protected override void OnSecondUpdateUnScaleTime()
+        {
+        }
+
+        protected override void OnWaitForAsyncComplete()
+        {
         }
     }
 }
