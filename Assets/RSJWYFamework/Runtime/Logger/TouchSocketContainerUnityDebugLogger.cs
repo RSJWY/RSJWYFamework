@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// Unity 日志插件
-/// <remarks>注入日志容器</remarks>
+/// <remarks>TouchSocket注入日志容器</remarks>
 /// </summary>
 public class TouchSocketContainerUnityDebugLogger : LoggerBase
 {

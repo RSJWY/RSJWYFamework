@@ -2,6 +2,8 @@ using UnityEngine;
 using TouchSocket.Core;
 using System;
 using System.Threading.Tasks;
+using RSJWYFamework.Runtime;
+using LogLevel = TouchSocket.Core.LogLevel;
 
 /// <summary>
 /// 纯C#日志桥接器（不依赖MonoBehaviour）
@@ -98,7 +100,7 @@ public class UnityLogToFileServer : MonoBehaviour
     private static void InitializeLogger()
     {
         UnityLoggerBridge.Init();
-        Debug.Log("初始化日志记录器");
+        AppLogger.Log("初始化日志记录器");
     }
 
     /// <summary>
@@ -111,7 +113,7 @@ public class UnityLogToFileServer : MonoBehaviour
         var obj = new GameObject("[UnityLogToFileServerHelper]");
         obj.AddComponent<UnityLogToFileServer>();
         DontDestroyOnLoad(obj);
-        Debug.Log("注册Unity生命周期");
+        AppLogger.Log("注册Unity生命周期");
     }
     private void OnApplicationQuit()
     {
