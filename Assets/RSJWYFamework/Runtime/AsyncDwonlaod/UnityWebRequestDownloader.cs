@@ -97,7 +97,7 @@ namespace RSJWYFamework.Runtime
             return new UnityWebRequestDownloader(url, savePath);
         }
 
-        protected override void OnStart()
+        internal override void InternalStart()
         {
             if (string.IsNullOrEmpty(_url))
             {
@@ -136,7 +136,7 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        protected override void OnUpdate()
+        internal override void InternalUpdate()
         {
             if (_webRequest == null || Status != AppAsyncOperationStatus.Processing)
                 return;
@@ -179,12 +179,16 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        protected override void OnSecondUpdate()
+        internal override void InternalSecondUpdate()
         {
-            // 秒更新暂时不需要特殊处理
+            
         }
 
-        protected override void OnAbort()
+        internal override void InternalSecondUnScaleTimeUpdate()
+        {
+        }
+
+        internal override void InternalAbort()
         {
             if (_webRequest != null && !_webRequest.isDone)
             {
@@ -193,19 +197,9 @@ namespace RSJWYFamework.Runtime
                 Error = "下载被用户取消";
             }
         }
-
-        protected override void OnSecondUpdateUnScaleTime()
+        internal override void InternalWaitForAsyncComplete()
         {
-            // 不受时间缩放影响的秒更新暂时不需要特殊处理
-        }
-
-        protected override void OnWaitForAsyncComplete()
-        {
-            // 同步等待下载完成
-            while (_webRequest != null && !_webRequest.isDone)
-            {
-                System.Threading.Thread.Sleep(1);
-            }
+            throw new AppException("UnityWebRequestDownloader 不支持同步等待完成，因为它是异步操作。");
         }
 
         /// <summary>

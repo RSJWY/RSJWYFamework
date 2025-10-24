@@ -2,6 +2,7 @@ using UnityEngine;
 using TouchSocket.Core;
 using System;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using RSJWYFamework.Runtime;
 using LogLevel = TouchSocket.Core.LogLevel;
 
@@ -43,6 +44,10 @@ public static class UnityLoggerBridge
             {
                 Debug.LogError($"捕获到Task任务中未处理的异常信息：{e.Exception}");
                 e.SetObserved(); // 标记异常已处理，避免程序崩溃
+            };
+            UniTaskScheduler.UnobservedTaskException+=(e) =>
+            {
+                Debug.LogError($"捕获到UniTask任务中未处理的异常信息：{e}");
             };
             _isInitialized = true;
 

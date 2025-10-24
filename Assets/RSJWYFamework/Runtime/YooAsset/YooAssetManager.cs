@@ -30,7 +30,7 @@ namespace RSJWYFamework.Runtime
                 LoadPackagesAsyncOperation operationR = 
                     new LoadPackagesAsyncOperation(this,projectConfig.YooAssetPackageData[i].PackageName, projectConfig.PlayMode);
                 
-                taskArr[i]=operationR.UniTask();
+                taskArr[i]=operationR.ToUniTask();
             }
             //等待完成
             await UniTask.WhenAll(taskArr);

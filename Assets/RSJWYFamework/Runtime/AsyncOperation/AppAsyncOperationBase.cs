@@ -472,7 +472,7 @@ namespace RSJWYFamework.Runtime
         /// 异步操作任务
         /// 简易的异步实现，可不使用回调直接进行异步等待
         /// </summary>
-        public UniTask UniTask(CancellationToken cancellationToken = default)
+        public UniTask ToUniTask(CancellationToken cancellationToken = default)
         {
             //TODO 避免忘记将本异步放入异步系统中执行生命周期，本段代码是否合理，仍需研究
             if (Status == AppAsyncOperationStatus.None)

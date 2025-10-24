@@ -20,7 +20,7 @@ namespace RSJWYFamework.Runtime
         public async UniTask LoadHotCodeDLL()
         {
             var op = new LoadHotCodeAsyncOperation(this);
-            await op.UniTask();
+            await op.ToUniTask();
             HotCode = op.HotCode;
         }
 
