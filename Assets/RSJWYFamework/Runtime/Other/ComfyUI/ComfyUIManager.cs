@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 
 namespace RSJWYFamework.Runtime
 {
-    [Module()]
     public class ComfyUIManager:ModuleBase
     {
         public string ClientID;
@@ -40,9 +39,7 @@ namespace RSJWYFamework.Runtime
                     })
                     .ConfigurePlugins(a =>
                     {
-                        a.UseWebSocketReconnection();
-                        //使用健康插件进行绝对存活检测，默认10秒检测一次。
-                        a.UseWebSocketHeartbeat();
+                       
                     })
                     .SetRemoteIPHost($"{(UseWss?"wss":"ws")}://{ComfyUIRemote}/ws?client_id={ClientID}");
                 ComfyUIWSClient = new WebSocketClient();

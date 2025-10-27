@@ -28,7 +28,7 @@ namespace RSJWYFamework.Runtime
             {
                 //配置异步任务
                 LoadPackagesAsyncOperation operationR = 
-                    new LoadPackagesAsyncOperation(this,projectConfig.YooAssetPackageData[i].PackageName, projectConfig.PlayMode);
+                    new LoadPackagesAsyncOperation(projectConfig.YooAssetPackageData[i].PackageName, projectConfig.PlayMode);
                 
                 taskArr[i]=operationR.ToUniTask();
             }

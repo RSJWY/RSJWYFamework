@@ -8,7 +8,7 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 检查本地资源包版本是否与服务器版本一致，以应对弱联网
     /// </summary>
-    public class CheckLocalAssetsVersion:StateNodeBase
+    public class CheckLocalAssetsVersionNode:StateNodeBase
     {
         public override void OnInit()
         {

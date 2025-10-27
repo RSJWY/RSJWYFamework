@@ -15,9 +15,9 @@ namespace RSJWYFamework.Runtime
         private LoadPackageSteps _steps = LoadPackageSteps.None;
         
         
-        public LoadPackagesAsyncOperation(object owner,string packageName, EPlayMode playMode)
+        public LoadPackagesAsyncOperation(string packageName, EPlayMode playMode)
         {
-            _smc = new StateMachine(owner,"初始化资源管理");
+            _smc = new StateMachine(this,"初始化资源管理");
             // 创建状态机
             //2.2.1版本 offlinePlayMode EditorSimulateMode 需要依次调用init, request version, update manifest 三部曲
             _smc.AddNode(new InitPackageNode());
@@ -29,7 +29,7 @@ namespace RSJWYFamework.Runtime
             _smc.AddNode(new ClearPackageCacheNode());
             _smc.AddNode(new UpdaterDoneNode());
             //检查本地资源版本，弱联网将检查上次下载的版本
-            _smc.AddNode(new CheckLocalAssetsVersion());
+            _smc.AddNode(new CheckLocalAssetsVersionNode());
             
             //写入数据
             _smc.SetBlackboardValue("PlayMode",playMode);

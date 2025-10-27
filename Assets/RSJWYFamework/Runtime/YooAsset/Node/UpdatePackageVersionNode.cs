@@ -65,7 +65,7 @@ namespace RSJWYFamework.Runtime
                     // 重试次数用完，设置网络异常状态
                     AppLogger.Error($"更新包{packageName}版本失败，已达到最大重试次数({maxRetries})，停止重试，将读取上一次缓存的版本");
                     
-                    SwitchToNode<CheckLocalAssetsVersion>();
+                    SwitchToNode<CheckLocalAssetsVersionNode>();
                 }
             }
             else
