@@ -35,7 +35,7 @@ namespace RSJWYFamework.Runtime.Node
         private string postJson;
         
         
-        private string _postURL;
+        private string _remoteIPHost;
         public override void OnInit()
         {
             
@@ -50,7 +50,7 @@ namespace RSJWYFamework.Runtime.Node
             // 从Blackboard获取值
             _clientid = GetBlackboardValue<string>("CLIENTID");
             _json = GetBlackboardValue<string>("JSON");
-             _postURL = GetBlackboardValue<string>("POSTURL");
+             _remoteIPHost = GetBlackboardValue<string>("REMOTEIPHOST");
             
             // 1. 创建主JSON对象
             JObject mainJson = new JObject();
@@ -64,7 +64,7 @@ namespace RSJWYFamework.Runtime.Node
         }
         private async UniTaskVoid PostJson()
         {
-            using ( UnityWebRequest request = new UnityWebRequest(_postURL, "POST"))
+            using ( UnityWebRequest request = new UnityWebRequest($"{_remoteIPHost}/prompt", "POST"))
             {
                 byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(postJson);
                 request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
@@ -78,8 +78,8 @@ namespace RSJWYFamework.Runtime.Node
                     AppLogger.Log("POST成功！响应：" + request.downloadHandler.text);
                     // 解析响应（如需要）
                     // var response = JsonUtility.FromJson<ResponseData>(webRequest.downloadHandler.text);
-                    promptInfo = JsonUtility.FromJson<PromptInfo>(request.downloadHandler.text);
-                    SetBlackboardValue("PROMPTID", promptInfo.PromptId);
+                    promptInfo = JsonConvert.DeserializeObject<PromptInfo>(request.downloadHandler.text);
+                    SetBlackboardValue("PROMPTINFO", promptInfo);
                     SwitchToNode<ComfyUIWebsocketNode>();
                 }
                 else
@@ -108,6 +108,9 @@ namespace RSJWYFamework.Runtime.Node
         /// </summary>
         [JsonProperty("prompt_id")]
         public string PromptId { get; set; }
+        /// <summary>
+        /// 在当前ComfyUI实例中这个任务序号（总的）
+        /// </summary>
         [JsonProperty("number")]
         public int Number { get; set; }
         // 即使在成功的情况下node_errors也可能存在（尽管是空的），所以包含它

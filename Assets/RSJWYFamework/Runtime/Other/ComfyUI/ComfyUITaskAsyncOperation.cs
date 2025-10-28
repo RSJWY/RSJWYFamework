@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using RSJWYFamework.Runtime.Node;
 
 namespace RSJWYFamework.Runtime
@@ -10,7 +11,7 @@ namespace RSJWYFamework.Runtime
             None,
             Post,
             WebsocketWait,
-            Download,
+            DownloadResult,
             Done,
             Error,
         }
@@ -26,24 +27,47 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private string _json;
         
-        
+        /// <summary>
+        /// 获取历史图片URL的处理函数，用户手动处理获取输出的图片URL
+        /// </summary>
+        private Func<JObject,GetHistoryImageURLResult> _getHistoryImageURL;
         /// <summary>
         /// ComfyUI工作任务ID
         /// </summary>
         private PromptInfo promptInfo;
+        /// <summary>
+        /// ComfyUI服务器地址
+        /// </summary>
+        private string _remoteIPHost;
+        /// <summary>
+        /// 是否使用wss
+        /// </summary>
+        private bool _useWss;
         
-        private string _postURL;
-        
-        public ComfyUITaskAsyncOperation(string clientid,string json,string postURL,object owner)
+        /// <summary>
+        /// 获取历史图片URL的函数
+        /// </summary>
+        /// <param name="clientid">设备id</param>
+        /// <param name="json">json字符串</param>
+        /// <param name="remoteIPHost">ComfyUI服务器地址</param>
+        /// <param name="getHistoryImageURL">获取历史图片URL的处理函数，用户手动处理获取输出的图片URL</param>
+        /// <param name="useWss">是否使用wss</param>
+        /// <param name="owner">任务所属对象</param>
+        public ComfyUITaskAsyncOperation(string clientid,string json,string remoteIPHost,
+            Func<JObject,GetHistoryImageURLResult> getHistoryImageURL,
+        bool useWss,object owner)
         {
             _smc = new StateMachine(this,$"ComfyUITask-{Guid.NewGuid()}");
             _clientid = clientid;
             _json = json;
-            _postURL = postURL;
+            _remoteIPHost = remoteIPHost;
+            _getHistoryImageURL = getHistoryImageURL;
             
             _smc.SetBlackboardValue("CLIENTID",_clientid);
             _smc.SetBlackboardValue("JSON",_json);
-            _smc.SetBlackboardValue("POSTURL",_postURL);
+            _smc.SetBlackboardValue("REMOTEIPHOST",_remoteIPHost);
+            _smc.SetBlackboardValue("USEWSS",_useWss);
+            _smc.SetBlackboardValue("GETHISTORYIMAGEURL",_getHistoryImageURL);
             
             _smc.StateMachineTerminatedEvent+=OnStateMachineTerminated;
             _smc.ProcedureSwitchEvent+=OnProcedureSwitchEvent;
@@ -61,6 +85,7 @@ namespace RSJWYFamework.Runtime
             else if (current is ComfyUIWebsocketNode)
             {
                 _steps = ComfyUITaskStatus.WebsocketWait;
+                promptInfo=_smc.GetBlackboardValue<PromptInfo>("PROMPTINFO");
             }
         }
 
