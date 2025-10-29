@@ -87,6 +87,10 @@ namespace RSJWYFamework.Runtime
                 _steps = ComfyUITaskStatus.WebsocketWait;
                 promptInfo=_smc.GetBlackboardValue<PromptInfo>("PROMPTINFO");
             }
+            else if (current is ComfyUIDownloadResultNode)
+            {
+                _steps = ComfyUITaskStatus.DownloadResult;
+            }
         }
 
         /// <summary>

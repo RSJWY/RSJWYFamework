@@ -122,7 +122,7 @@ namespace RSJWYFamework.Runtime.Node
                     if (_state==ComfyUIWebsocketMsgType.execution_success)
                     {
                         AppLogger.Log($"ComfyUI websocket received execution_success message");
-                        SwitchToNode<ComfyUIDownloadResult>();
+                        SwitchToNode<ComfyUIDownloadResultNode>();
                     }
                 }
                 else
