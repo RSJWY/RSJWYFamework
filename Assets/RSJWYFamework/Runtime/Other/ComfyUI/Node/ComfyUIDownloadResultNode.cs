@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -15,7 +16,8 @@ namespace RSJWYFamework.Runtime.Node
         /// <summary>
         /// 获取历史图片URL的处理函数，用户手动处理获取输出的图片URL
         /// </summary>
-        private Func<JObject,GetHistoryImageURLResult> _getHistoryImageURL;
+        private ComfyUITaskAsyncOperation.GetHistoryImageURLHandle _getHistoryImageURL;
+        private bool _useHttps;
         public override void OnInit()
         {
             
@@ -28,8 +30,9 @@ namespace RSJWYFamework.Runtime.Node
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
             promptInfo=GetBlackboardValue<PromptInfo>("PROMPTINFO");
+            _useHttps=GetBlackboardValue<bool>("USEHTTPS");
             _remoteIPHost=GetBlackboardValue<string>("REMOTEIPHOST");
-            _getHistoryImageURL=GetBlackboardValue<Func<JObject,GetHistoryImageURLResult>>("GETHISTORYIMAGEURL");
+            _getHistoryImageURL=GetBlackboardValue<ComfyUITaskAsyncOperation.GetHistoryImageURLHandle>("GETHISTORYIMAGEURL");
             DownloadImageURL().Forget();
         }
 
@@ -47,80 +50,123 @@ namespace RSJWYFamework.Runtime.Node
             }
             else
             {
-                StopStateMachine($"获取历史图片URL失败！错误：{result.Error ?? "未知错误"}",500);
+                TerminateStateMachine($"获取历史图片URL失败！错误：{result.Error ?? "未知错误"}",500);
             }
             _texture=await DownloadImage(result.ImageURL);
             if(_texture==null)
             {
-                StopStateMachine($"下载图片失败！",500);
+                TerminateStateMachine($"下载图片失败！",500);
             }
             else
             {
                 SetBlackboardValue("TEXTURE", _texture);
-                StopStateMachine("下载图片成功！",0);
+                TerminateStateMachine("下载图片成功！",0);
             }
         }
         private async UniTask<Texture2D> DownloadImage(string imageURL)
         {
-            var URL=$"{_remoteIPHost}/{imageURL}";
-            using ( UnityWebRequest request = UnityWebRequestTexture.GetTexture(URL))
+            var URL=$"{(_useHttps ? "https" : "http")}://{_remoteIPHost}/view{imageURL}";
+            AppLogger.Log($"下载图片URL：{URL}");
+            using (var httpClient = new HttpClient())
             {
-                await request.SendWebRequest().ToUniTask();
-                
-                if (request.result == UnityWebRequest.Result.Success)
+                try
                 {
-                    AppLogger.Log("POST成功！响应：" + request.downloadHandler.text);
-                    // 解析响应（如需要）
-                    // var response = JsonUtility.FromJson<ResponseData>(webRequest.downloadHandler.text);
-                    Texture2D texture =DownloadHandlerTexture.GetContent(request);
-                    return texture;
+                    // 发送GET请求获取图片字节流（图片下载默认用GET）
+                    byte[] imageData = await httpClient.GetByteArrayAsync(URL);
+
+                    // 将字节流转换为Texture2D
+                    Texture2D texture = new Texture2D(2, 2); // 初始尺寸不影响，LoadImage会自动调整
+                    bool isLoaded = texture.LoadImage(imageData); // 支持PNG、JPG等常见格式
+
+                    if (isLoaded)
+                    {
+                        AppLogger.Log("图片下载成功！");
+                        return texture;
+                    }
+                    else
+                    {
+                        AppLogger.Error("图片解析失败（字节流不是有效的图片格式）");
+                        TerminateStateMachine("下载图片失败：字节流无法解析为图片", 500);
+                        return null;
+                    }
                 }
-                else
+                catch (HttpRequestException ex)
                 {
-                    AppLogger.Error("状态码：" + request.responseCode);
-                    AppLogger.Error("POST失败！错误：" + request.error);
-                    StopStateMachine($"下载图片失败！错误：{request.error},状态码：{request.responseCode}",500);
+                    // 处理网络连接错误（如无网络、DNS失败、超时等）
+                    AppLogger.Error("网络请求错误：" + ex.Message);
+                    TerminateStateMachine($"下载图片失败：网络错误 - {ex.Message}", 500);
                     return null;
                 }
-            }  
+                catch (Exception ex)
+                {
+                    // 处理其他未知错误
+                    AppLogger.Error("下载图片时发生未知错误：" + ex.Message);
+                    TerminateStateMachine($"下载图片失败：未知错误 - {ex.Message}", 500);
+                    return null;
+                }
+            }
         }
         private async UniTask<GetHistoryImageURLResult> GetHistoryImageURL()
         {
             var _prompt_id=promptInfo.PromptId;
-            var imageUrl = $"{_remoteIPHost}/history/{_prompt_id}";
-            using ( UnityWebRequest request = new UnityWebRequest(imageUrl, "GET"))
+            var imageUrl = $"{(_useHttps ? "https" : "http")}://{_remoteIPHost}/history/{_prompt_id}";
+            AppLogger.Log($"获取历史图片URL：{imageUrl}");
+            using (var httpClient = new HttpClient())
             {
-                await request.SendWebRequest().ToUniTask();
-                
-                if (request.result == UnityWebRequest.Result.Success)
+                try
                 {
-                    AppLogger.Log("POST成功！响应：" + request.downloadHandler.text);
-                    // 解析响应（如需要）
-                    // var response = JsonUtility.FromJson<ResponseData>(webRequest.downloadHandler.text);
-                    JObject historyInfo = JObject.Parse(request.downloadHandler.text);
-                    return _getHistoryImageURL(historyInfo);
-                     
+                    // 发送GET请求并获取响应文本
+                    string responseText = await httpClient.GetStringAsync(imageUrl);
+
+                    // 解析响应为JObject
+                    JObject historyInfo = JObject.Parse(responseText);
+                    AppLogger.Log("GET成功！响应：" + responseText);
+
+                    // 调用处理方法并返回结果
+                    return _getHistoryImageURL(historyInfo, _prompt_id);
                 }
-                else
+                catch (HttpRequestException ex)
                 {
-                    AppLogger.Error("状态码：" + request.responseCode);
-                    AppLogger.Error("POST失败！错误：" + request.error);
-                    StopStateMachine($"PostJson失败！错误：{request.error},状态码：{request.responseCode}",500);
+                    // 网络层面错误（无网络、连接超时、DNS失败等，无HTTP状态码）
+                    AppLogger.Error("网络请求失败：" + ex.Message);
+                    TerminateStateMachine($"Get请求失败：网络错误 - {ex.Message}", 500);
+
                     return new GetHistoryImageURLResult()
                     {
-                        ImageURL=string.Empty,
-                        Success=false
+                        ImageURL = string.Empty,
+                        Success = false
                     };
                 }
-            }  
+                catch (Exception ex)
+                {
+                    // 处理其他未知错误（如JSON解析失败等）
+                    AppLogger.Error("GET请求发生未知错误：" + ex.Message);
+                    TerminateStateMachine($"Get请求失败！未知错误：{ex.Message}", 500);
+
+                    return new GetHistoryImageURLResult()
+                    {
+                        ImageURL = string.Empty,
+                        Success = false
+                    };
+                }
+            }
         }
     }
     
     public struct GetHistoryImageURLResult
     {
-        
+        /// <summary>
+        /// 使用/view接口，所以返回的图片URL需要拼接完整路径
+        /// ?filename=ComfyUI_00702_.png&type=output
+        /// 可使用本方法提供的静态函数ComfyUITaskAsyncOperation.GetFullImageURL
+        /// </summary>
         public string ImageURL;
         public bool Success;
         public string Error;
+        
+        public static string GetFullImageURL(string filename,string type)
+        {
+            return $"?filename={filename}&type={type}";
+        }
     }
 }

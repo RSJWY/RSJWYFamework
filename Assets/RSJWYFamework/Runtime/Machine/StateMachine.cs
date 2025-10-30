@@ -763,7 +763,7 @@ namespace RSJWYFamework.Runtime
                     _currentProcedureBase.OnStop(reason);
                     AppLogger.Log($"状态机 {st_Name} 停止时调用了当前节点的OnStop：{_currentProcedureBase.GetType().Name}");
                 }
-                
+                Terminate($"为停止而终止：{reason}", true, statusCode); // 传递true表示这是停止操作
                 AppLogger.Log($"状态机 {st_Name} 已停止，原因：{reason}，状态码：{statusCode}");
             }
             catch (Exception ex)

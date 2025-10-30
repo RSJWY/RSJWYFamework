@@ -1,6 +1,8 @@
 using System;
+using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using RSJWYFamework.Runtime.Node;
+using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
@@ -25,12 +27,18 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// json字符串
         /// </summary>
-        private string _json;
-        
+        private JObject _json;
+        /// <summary>
+        /// 获取历史图片URL的处理函数委托
+        /// </summary>
+        /// <param name="json">ComfyUI历史响应json字符串</param>
+        /// <param name="promptID">ComfyUI工作任务ID</param>
+        /// <returns>获取历史图片URL的结果</returns>
+        public delegate GetHistoryImageURLResult GetHistoryImageURLHandle(JObject json,string promptID);
         /// <summary>
         /// 获取历史图片URL的处理函数，用户手动处理获取输出的图片URL
         /// </summary>
-        private Func<JObject,GetHistoryImageURLResult> _getHistoryImageURL;
+        private GetHistoryImageURLHandle _getHistoryImageURL;
         /// <summary>
         /// ComfyUI工作任务ID
         /// </summary>
@@ -44,6 +52,8 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         private bool _useWss;
         
+        public Texture2D DownloadedTexture { get; private set; }
+        
         /// <summary>
         /// 获取历史图片URL的函数
         /// </summary>
@@ -53,8 +63,8 @@ namespace RSJWYFamework.Runtime
         /// <param name="getHistoryImageURL">获取历史图片URL的处理函数，用户手动处理获取输出的图片URL</param>
         /// <param name="useWss">是否使用wss</param>
         /// <param name="owner">任务所属对象</param>
-        public ComfyUITaskAsyncOperation(string clientid,string json,string remoteIPHost,
-            Func<JObject,GetHistoryImageURLResult> getHistoryImageURL,
+        public ComfyUITaskAsyncOperation(string clientid,[NotNull]JObject json,string remoteIPHost,
+            GetHistoryImageURLHandle getHistoryImageURL,
         bool useWss,object owner)
         {
             _smc = new StateMachine(this,$"ComfyUITask-{Guid.NewGuid()}");
@@ -68,12 +78,14 @@ namespace RSJWYFamework.Runtime
             _smc.SetBlackboardValue("REMOTEIPHOST",_remoteIPHost);
             _smc.SetBlackboardValue("USEWSS",_useWss);
             _smc.SetBlackboardValue("GETHISTORYIMAGEURL",_getHistoryImageURL);
+            _smc.SetBlackboardValue("USEHTTPS",useWss);
             
             _smc.StateMachineTerminatedEvent+=OnStateMachineTerminated;
             _smc.ProcedureSwitchEvent+=OnProcedureSwitchEvent;
             
             _smc.AddNode<ComfyUIPostNode>();
             _smc.AddNode<ComfyUIWebsocketNode>();
+            _smc.AddNode<ComfyUIDownloadResultNode>();
         }
 
         private void OnProcedureSwitchEvent(StateNodeBase last, StateNodeBase current)
@@ -105,6 +117,7 @@ namespace RSJWYFamework.Runtime
                 {
                     _steps = ComfyUITaskStatus.Done;
                     Status=AppAsyncOperationStatus.Succeed;
+                    DownloadedTexture=_smc.GetBlackboardValue<Texture2D>("TEXTURE");
                 }
                 else
                 {

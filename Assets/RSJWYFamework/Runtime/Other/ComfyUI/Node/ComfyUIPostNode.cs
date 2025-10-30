@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -7,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using TouchSocket.Http;
 using UnityEngine;
 using UnityEngine.Networking;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace RSJWYFamework.Runtime.Node
 {
@@ -22,7 +24,7 @@ namespace RSJWYFamework.Runtime.Node
         /// <summary>
         /// json字符串
         /// </summary>
-        private string _json;
+        private JObject _json;
         
         /// <summary>
         /// ComfyUI工作任务ID
@@ -34,7 +36,11 @@ namespace RSJWYFamework.Runtime.Node
         /// </summary>
         private string postJson;
         
+        private bool _useHttps;
         
+        /// <summary>
+        /// ComfyUI服务器IP地址
+        /// </summary>
         private string _remoteIPHost;
         public override void OnInit()
         {
@@ -49,8 +55,9 @@ namespace RSJWYFamework.Runtime.Node
         {
             // 从Blackboard获取值
             _clientid = GetBlackboardValue<string>("CLIENTID");
-            _json = GetBlackboardValue<string>("JSON");
+            _json = GetBlackboardValue<JObject>("JSON");
              _remoteIPHost = GetBlackboardValue<string>("REMOTEIPHOST");
+             _useHttps = GetBlackboardValue<bool>("USEHTTPS");
             
             // 1. 创建主JSON对象
             JObject mainJson = new JObject();
@@ -64,31 +71,47 @@ namespace RSJWYFamework.Runtime.Node
         }
         private async UniTaskVoid PostJson()
         {
-            using ( UnityWebRequest request = new UnityWebRequest($"{_remoteIPHost}/prompt", "POST"))
+            using (var httpClient = new HttpClient())
             {
-                byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(postJson);
-                request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
-                request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-                request.SetRequestHeader("Content-Type", "application/json");
-                
-                await request.SendWebRequest().ToUniTask();
-                
-                if (request.result == UnityWebRequest.Result.Success)
+                try
                 {
-                    AppLogger.Log("POST成功！响应：" + request.downloadHandler.text);
-                    // 解析响应（如需要）
-                    // var response = JsonUtility.FromJson<ResponseData>(webRequest.downloadHandler.text);
-                    promptInfo = JsonConvert.DeserializeObject<PromptInfo>(request.downloadHandler.text);
-                    SetBlackboardValue("PROMPTINFO", promptInfo);
-                    SwitchToNode<ComfyUIWebsocketNode>();
+                    // 构建请求URL
+                    string requestUrl = $"{(_useHttps ? "https" : "http")}://{_remoteIPHost}/prompt";
+            
+                    // 创建JSON请求内容（自动设置Content-Type为application/json）
+                    var content = new StringContent(postJson, Encoding.UTF8, "application/json");
+            
+                    // 发送POST请求
+                    HttpResponseMessage response = await httpClient.PostAsync(requestUrl, content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // 读取成功响应内容
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        AppLogger.Log("POST成功！响应：" + responseText);
+                
+                        // 解析JSON响应
+                        promptInfo = JsonConvert.DeserializeObject<PromptInfo>(responseText);
+                        SetBlackboardValue("PROMPTINFO", promptInfo);
+                        SwitchToNode<ComfyUIWebsocketNode>();
+                    }
+                    else
+                    {
+                        // 处理请求失败（非2xx状态码）
+                        int statusCode = (int)response.StatusCode;
+                        string errorMessage = await response.Content.ReadAsStringAsync() ?? response.ReasonPhrase;
+                
+                        AppLogger.Error("状态码：" + statusCode);
+                        AppLogger.Error("POST失败！错误：" + errorMessage);
+                        TerminateStateMachine($"PostJson失败！错误：{errorMessage},状态码：{statusCode}", 500);
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    AppLogger.Error("状态码：" + request.responseCode);
-                    AppLogger.Error("POST失败！错误：" + request.error);
-                    StopStateMachine($"PostJson失败！错误：{request.error},状态码：{request.responseCode}",500);
+                    Console.WriteLine(e);
+                    throw;
                 }
-            }  
+            }
         }
 
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)

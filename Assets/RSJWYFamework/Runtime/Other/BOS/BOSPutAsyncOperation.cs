@@ -1,109 +1,104 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using Cysharp.Threading.Tasks;
+using UnityEngine.Networking;
 
-namespace RSJWYFamework.Runtime.BOS
+namespace RSJWYFamework.Runtime
 {
-    public class BOSPutAsyncOperation:AppGameAsyncOperation
-    {
-
-        /// <summary>
-        /// PUT提交信息
-        /// </summary>
-        private PutInfo putInfo;
-
-
-
-
-        public BOSPutAsyncOperation(PutInfo putInfo)
-        {
-            
-        }
-        
-        
-        
-        
-        
-        protected override void OnStart()
-        {
-            
-        }
-
-        protected override void OnUpdate()
-        {
-        }
-
-        protected override void OnSecondUpdate()
-        {
-        }
-
-        protected override void OnAbort()
-        {
-        }
-
-        protected override void OnSecondUpdateUnScaleTime()
-        {
-        }
-
-        protected override void OnWaitForAsyncComplete()
-        {
-        }
-    }
-
-    public struct PutInfo
+    public class BOSAsync
     {
         /// <summary>
-        /// accessKeyId
+        /// Unity环境下通过UniTask+UnityWebRequest上传文件到BOS
         /// </summary>
-        public string accessKeyId;
-        /// <summary>
-        /// secretAccessKey
-        /// </summary>
-        public string secretAccessKey;
-        /// <summary>
-        /// 存储区域
-        /// </summary>
-        public string region ;
-        /// <summary>
-        /// 服务类型，固定位bos
-        /// </summary>
-        public const string service = "BceBos"; 
-        /// <summary>
-        /// Put请求
-        /// </summary>
-        public const string httpMethod = "PUT"; 
-        /// <summary>
-        /// 你的存储桶名
-        /// </summary>
-        public string bucketName ; 
-        /// <summary>
-        /// 上传后的对象键（BOS中的路径）
-        /// </summary>
-        public string objectKey;
-
-        /// <summary>
-        /// 规范URI路径（必须以/开头）
-        /// </summary>
-        public string uriPath;
-
-        /// <summary>
-        /// Host头值
-        /// </summary>
-        public string host;
-        
-        /// <summary>
-        /// HTTP 1.1协议中规定的GMT时间,Wed, 06 Apr 2016 06:34:40 GMT。
-        /// </summary>
-        public string date;
-        /// <summary>
-        /// 用于x-bce-date头（ISO格式）
-        /// </summary>
-        public string xBceDate; 
-
-        internal void SetInternalInfo()
+        /// <param name="accessKeyId">AK</param>
+        /// <param name="secretAccessKey">SK</param>
+        /// <param name="bucketName">存储桶名</param>
+        /// <param name="region">区域（如bj、gz）</param>
+        /// <param name="objectKey">BOS对象键（如"images/test.png"）</param>
+        /// <param name="localFilePath">本地文件路径（支持Unity路径格式，如"file:///C:/test.png"或Application.persistentDataPath下的路径）</param>
+        /// <param name="storageClass">存储类型（默认STANDARD）</param>
+        /// <returns>上传结果（成功/失败信息）</returns>
+        public static async UniTask<string> UploadFileAsync(
+            string accessKeyId, string secretAccessKey, string bucketName,
+            string region, string objectKey, string localFilePath,
+            string storageClass = "STANDARD")
         {
-            uriPath = $"/{objectKey}";
-            date= DateTime.UtcNow.ToString("yyyyMMdd");
-            date= DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-            host= $"{bucketName}.{region}.bcebos.com"; 
+            // 1. 校验本地文件是否存在
+            if (!File.Exists(localFilePath))
+                return $"错误：本地文件不存在 → {localFilePath}";
+
+            try
+            {
+                // 2. 读取文件字节（Unity中处理文件需注意路径格式）
+                byte[] fileData = File.ReadAllBytes(localFilePath);
+                long contentLength = fileData.LongLength;
+
+                // 3. 基础参数配置
+                string httpMethod = "PUT";
+                string service = "bos";
+                string host = $"{bucketName}.{region}.bcebos.com";
+                string uriPath = $"/{objectKey}";
+                string url = $"https://{host}{uriPath}";
+
+                // 4. 日期参数（UTC时间，Unity中DateTime.UtcNow兼容各平台）
+                string date = DateTime.UtcNow.ToString("yyyyMMdd");
+                string xBceDate = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                // 5. 构建请求头
+                var headers = new Dictionary<string, string>
+                {
+                    { "Host", host },
+                    { "x-bce-date", xBceDate },
+                    { "Content-Length", contentLength.ToString() },
+                    { "Content-Type", Utility.BOS.GetContentType(objectKey) },
+                    { "x-bce-storage-class", storageClass }
+                };
+
+                // 可选：添加Content-MD5校验（防止文件损坏）
+                string contentMd5 = Utility.BOS.CalculateMd5(fileData);
+                if (!string.IsNullOrEmpty(contentMd5))
+                    headers.Add("Content-MD5", contentMd5);
+
+                // 6. 生成V2签名
+                string authString = Utility.BOS.GenerateAuthString(
+                    accessKeyId, secretAccessKey, httpMethod, uriPath,
+                    new Dictionary<string, string>(), headers, region, service, date);
+
+                // 7. 配置UnityWebRequest（PUT方法上传）
+                using (UnityWebRequest webRequest = UnityWebRequest.Put(url, fileData))
+                {
+                    // 设置请求头（必须在Send前设置）
+                    webRequest.SetRequestHeader("Authorization", authString);
+                    webRequest.SetRequestHeader("x-bce-date", xBceDate);
+                    webRequest.SetRequestHeader("Content-Type", headers["Content-Type"]);
+                    webRequest.SetRequestHeader("x-bce-storage-class", storageClass);
+                    if (headers.ContainsKey("Content-MD5"))
+                        webRequest.SetRequestHeader("Content-MD5", contentMd5);
+
+                    // 8. 发送请求并等待完成（使用UniTask适配Unity异步）
+                    // 注意：需传入CancellationToken，可绑定到MonoBehaviour生命周期
+                    var asyncOp = webRequest.SendWebRequest();
+                    await asyncOp.ToUniTask();
+
+                    // 9. 处理响应结果
+                    if (webRequest.result == UnityWebRequest.Result.Success)
+                    {
+                        string eTag = webRequest.GetResponseHeader("ETag") ?? "";
+                        string versionId = webRequest.GetResponseHeader("x-bce-version-id") ?? "";
+                        return $"上传成功！\nETag: {eTag}\n版本号: {versionId}\nBOS路径: bos://{bucketName}/{objectKey}";
+                    }
+                    else
+                    {
+                        return
+                            $"上传失败！\n错误: {webRequest.error}\n状态码: {webRequest.responseCode}\n响应: {webRequest.downloadHandler.text}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"上传异常！\n{ex.Message}\n堆栈: {ex.StackTrace}";
+            }
         }
     }
 }

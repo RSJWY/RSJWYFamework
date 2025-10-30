@@ -66,7 +66,7 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 异步操作系统是否繁忙
         /// </summary>
-        protected bool IsBusy()
+        public bool IsBusy()
         {
             return AppAsyncOperationSystem.IsBusy;
         }
@@ -75,7 +75,7 @@ namespace RSJWYFamework.Runtime
         /// 终止异步操作
         /// <remarks>继承的子类调用取消请求</remarks>
         /// </summary>
-        protected void Abort()
+        public void Abort()
         {
             AbortOperation();
         }

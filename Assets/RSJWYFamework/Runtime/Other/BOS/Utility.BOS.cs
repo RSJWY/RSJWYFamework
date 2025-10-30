@@ -1,15 +1,45 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace RSJWYFamework.Runtime.BOS
+namespace RSJWYFamework.Runtime
 {
     public static partial class Utility
     {
         public static class BOS
         {
+            /// <summary>
+            /// 自动识别文件Content-Type
+            /// </summary>
+            public static string GetContentType(string objectKey)
+            {
+                string extension = Path.GetExtension(objectKey).ToLowerInvariant();
+                return extension switch
+                {
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".txt" => "text/plain",
+                    ".json" => "application/json",
+                    ".pdf" => "application/pdf",
+                    _ => "application/octet-stream" // 默认类型
+                };
+            }
+
+            /// <summary>
+            /// 计算字节数组的MD5（Base64格式，适配BOS的Content-MD5要求）
+            /// </summary>
+            public static string CalculateMd5(byte[] data)
+            {
+                using (MD5 md5 = MD5.Create())
+                {
+                    byte[] hashBytes = md5.ComputeHash(data);
+                    return Convert.ToBase64String(hashBytes);
+                }
+            }
+
             /// <summary>
             /// 生成V2认证字符串（含签名）
             /// </summary>

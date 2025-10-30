@@ -40,6 +40,7 @@ namespace RSJWYFamework.Runtime.Node
             promptInfo=GetBlackboardValue<PromptInfo>("PROMPTINFO");
             _remoteIPHost=GetBlackboardValue<string>("REMOTEIPHOST");
             _useWss=GetBlackboardValue<bool>("USEWSS");
+            cancellationTokenSource=new CancellationTokenSource();
             ConnectComfyUI().Forget();
         }
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
@@ -66,7 +67,7 @@ namespace RSJWYFamework.Runtime.Node
                     {
                        
                     })
-                    .SetRemoteIPHost($"{(_useWss?"wss":"ws")}://{_remoteIPHost}/ws?client_id={_clientid}");
+                    .SetRemoteIPHost($"{(_useWss?"wss":"ws")}://{_remoteIPHost}/ws?clientId={_clientid}");
                 ComfyUIWSClient = new WebSocketClient();
                 ComfyUIWSClient.Received = (c, e) =>
                 {
@@ -101,12 +102,12 @@ namespace RSJWYFamework.Runtime.Node
                 };
                 await ComfyUIWSClient.SetupAsync(_wsConfig);
                 await ComfyUIWSClient.ConnectAsync(cancellationTokenSource.Token);
-                AppLogger.Log("ComfyUI websocket connected");
+                AppLogger.Log($"ComfyUI websocket connected,client_id is {_clientid}");
             }
             catch (Exception e)
             {
                 AppLogger.Error($"ComfyUI websocket connect failed,error is {e.Message}");
-                StopStateMachine($"ComfyUI websocket connect failed,error is {e.Message}",500);
+                TerminateStateMachine($"ComfyUI websocket connect failed,error is {e.Message}",500);
             }
             
         }
@@ -116,13 +117,18 @@ namespace RSJWYFamework.Runtime.Node
             try
             {
                 var _json=JObject.Parse(message);
+                AppLogger.Log($"ComfyUI websocket text message: \n{message}");
                 var comfyui_msg_type=_json["type"]?.ToString();
                 if (Enum.TryParse(comfyui_msg_type,out ComfyUIWebsocketMsgType _state))
                 {
                     if (_state==ComfyUIWebsocketMsgType.execution_success)
                     {
                         AppLogger.Log($"ComfyUI websocket received execution_success message");
-                        SwitchToNode<ComfyUIDownloadResultNode>();
+                        UniTask.Create(async () =>
+                        {
+                            await UniTask.SwitchToMainThread();
+                            SwitchToNode<ComfyUIDownloadResultNode>();
+                        });
                     }
                 }
                 else
