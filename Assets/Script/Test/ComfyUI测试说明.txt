@@ -1,0 +1,110 @@
+ComfyUI任务测试脚本使用说明
+================================
+
+## 文件说明
+- ComfyUITaskTest.cs: 测试脚本主文件
+
+## 使用步骤
+
+### 1. 准备工作
+- 确保ComfyUI服务器正在运行（默认地址：http://127.0.0.1:8188）
+- 将ComfyUITaskTest.cs脚本挂载到场景中的任意GameObject上
+
+### 2. 配置参数
+在Inspector面板中配置以下参数：
+
+**ComfyUI配置：**
+- Server Address: ComfyUI服务器地址（默认：http://127.0.0.1:8188）
+- Use Web Socket: 是否使用WebSocket连接（默认：false）
+- Client Id: 客户端标识符（默认：test-client-123）
+
+**测试JSON数据：**
+- 脚本中已包含一个基础的图像生成工作流JSON
+- 您可以替换为自己的ComfyUI工作流JSON数据
+
+### 3. 运行测试
+有三种方式启动测试：
+
+**方式1：自动启动**
+- 勾选"Auto Start Test"选项
+- 运行场景，测试将自动开始
+
+**方式2：手动按钮**
+- 运行场景后，点击游戏窗口左上角的"开始测试"按钮
+
+**方式3：右键菜单**
+- 在Inspector面板中右键点击脚本
+- 选择"开始ComfyUI测试"
+
+### 4. 监控结果
+- 查看Console窗口的日志输出
+- 成功时会显示"✅ ComfyUI任务执行成功！"
+- 失败时会显示"❌ ComfyUI任务执行失败"和具体错误信息
+
+## JSON数据格式说明
+
+脚本中包含的示例JSON是一个标准的ComfyUI工作流，包含以下节点：
+- CheckpointLoaderSimple: 加载AI模型
+- CLIPTextEncode: 正面和负面提示词编码
+- EmptyLatentImage: 创建空白潜在图像
+- KSampler: 采样器进行图像生成
+- VAEDecode: 解码潜在图像
+- SaveImage: 保存最终图像
+
+您可以：
+1. 在ComfyUI界面中设计自己的工作流
+2. 导出为JSON格式
+3. 替换脚本中的testJsonData字段
+
+## 自定义图片URL解析
+
+GetHistoryImageURLFromResponse方法负责从ComfyUI的历史响应中提取图片URL。
+当前实现是一个简化版本，您可能需要根据实际的ComfyUI响应格式进行调整。
+
+典型的ComfyUI历史响应格式：
+```json
+{
+  "prompt_id": {
+    "outputs": {
+      "node_id": {
+        "images": [
+          {
+            "filename": "ComfyUI_00001_.png",
+            "subfolder": "",
+            "type": "output"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+## 常见问题
+
+**Q: 连接失败怎么办？**
+A: 检查ComfyUI服务器是否正在运行，确认服务器地址是否正确
+
+**Q: JSON格式错误？**
+A: 确保JSON格式正确，可以使用在线JSON验证工具检查
+
+**Q: 任务一直运行不结束？**
+A: 检查ComfyUI服务器日志，可能是工作流配置有问题或缺少必要的模型文件
+
+**Q: 如何获取生成的图片？**
+A: 成功完成后，图片会保存在ComfyUI的输出目录中，URL会在日志中显示
+
+## 扩展建议
+
+1. 添加进度显示UI
+2. 支持批量任务处理
+3. 添加图片预览功能
+4. 实现任务队列管理
+5. 添加更详细的错误处理
+
+## 注意事项
+
+- 确保Unity项目中已正确配置Newtonsoft.Json包
+- 测试前请确保ComfyUI服务器可以正常访问
+- 大型图像生成可能需要较长时间，请耐心等待
+- 建议在开发环境中测试，避免在生产环境中使用测试数据
