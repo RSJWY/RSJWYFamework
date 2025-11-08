@@ -1,7 +1,11 @@
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using RSJWYFamework.Runtime.Node;
+using TouchSocket.Core;
+using TouchSocket.Http.WebSockets;
 using UnityEngine;
 
 namespace RSJWYFamework.Runtime
@@ -20,6 +24,7 @@ namespace RSJWYFamework.Runtime
         
         private readonly StateMachine _smc;
         private ComfyUITaskStatus _steps = ComfyUITaskStatus.None;
+        
         /// <summary>
         /// 客户端id
         /// </summary>
@@ -153,5 +158,100 @@ namespace RSJWYFamework.Runtime
         protected override void OnWaitForAsyncComplete()
         {
         }
+
+        #region Websocket
+
+        CancellationTokenSource cancellationTokenSource;
+        private WebSocketClient ComfyUIWSClient;
+         public async UniTask ConnectComfyUI()
+        {
+            ComfyUIWSClient?.Dispose();
+            try
+            {
+                var _wsConfig = new TouchSocketConfig()
+                    .ConfigureContainer(a =>
+                    {
+                        a.AddLogger(TouchSocketContainerUnityDebugLogger.Default);
+                    })
+                    .ConfigurePlugins(a =>
+                    {
+                       
+                    })
+                    .SetRemoteIPHost($"{(_useWss?"wss":"ws")}://{_remoteIPHost}/ws?clientId={_clientid}");
+                ComfyUIWSClient = new WebSocketClient();
+                ComfyUIWSClient.Received = (c, e) =>
+                {
+                    switch (e.DataFrame.Opcode)
+                    {
+                        case WSDataType.Cont:
+                            //处理中继包
+                            break;
+                        case WSDataType.Text:
+                            //处理文本包
+                            HandleTextMessage(e.DataFrame.ToText());
+                            break;
+                        case WSDataType.Binary:
+                            //处理二进制包
+                            //var data = dataFrame.PayloadData;
+                            //Console.WriteLine($"收到二进制数据，长度：{data.Length}");
+                            break;
+                        case WSDataType.Close:
+                            //处理关闭包
+                            break;
+                        case WSDataType.Ping:
+                            //处理Ping包
+                            break;
+                        case WSDataType.Pong:
+                            //处理Pong包
+                            break;
+                        default:
+                            //处理其他包
+                            break;
+                    }
+                    return EasyTask.CompletedTask;
+                };
+                await ComfyUIWSClient.SetupAsync(_wsConfig);
+                await ComfyUIWSClient.ConnectAsync(cancellationTokenSource.Token);
+                AppLogger.Log($"ComfyUI websocket connected,client_id is {_clientid}");
+            }
+            catch (Exception e)
+            {
+                AppLogger.Error($"ComfyUI websocket connect failed,error is {e.Message}");
+                //TerminateStateMachine($"ComfyUI websocket connect failed,error is {e.Message}",500);
+            }
+            
+        }
+        
+        private void HandleTextMessage(string message)
+        {
+            try
+            {
+                var _json=JObject.Parse(message);
+                AppLogger.Log($"ComfyUI websocket text message: \n{message}");
+                var comfyui_msg_type=_json["type"]?.ToString();
+                if (Enum.TryParse(comfyui_msg_type,out ComfyUIWebsocketMsgType _state))
+                {
+                    if (_state==ComfyUIWebsocketMsgType.execution_success)
+                    {
+                        AppLogger.Log($"ComfyUI websocket received execution_success message");
+                        UniTask.Create(async () =>
+                        {
+                            await UniTask.SwitchToMainThread();
+                            //SwitchToNode<ComfyUIDownloadResultNode>();
+                        });
+                    }
+                }
+                else
+                {
+                    AppLogger.Warning($"ComfyUI websocket received message type {comfyui_msg_type}  not implemented!! Raw message is :\n{message}");
+                }
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Error($"ComfyUI websocket received message parse failed,error is {exception.Message}");
+            }
+        }
+
+        #endregion
     }
 }

@@ -70,9 +70,14 @@ namespace RSJWYFamework.Runtime
                 {
                     // 设置请求头（必须在Send前设置）
                     webRequest.SetRequestHeader("Authorization", authString);
+                    foreach (var headersKV in headers)
+                    {
+                        webRequest.SetRequestHeader(headersKV.Key, headersKV.Value);
+                    }
+                    /*
                     webRequest.SetRequestHeader("x-bce-date", xBceDate);
                     webRequest.SetRequestHeader("Content-Type", headers["Content-Type"]);
-                    webRequest.SetRequestHeader("x-bce-storage-class", storageClass);
+                    webRequest.SetRequestHeader("x-bce-storage-class", storageClass);*/
                     if (headers.ContainsKey("Content-MD5"))
                         webRequest.SetRequestHeader("Content-MD5", contentMd5);
 
