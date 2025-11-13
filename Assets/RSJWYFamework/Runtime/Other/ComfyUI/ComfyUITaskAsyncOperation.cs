@@ -59,6 +59,8 @@ namespace RSJWYFamework.Runtime
         
         public Texture2D DownloadedTexture { get; private set; }
         
+        private TaskIDHandler _taskIDHandler;
+        
         /// <summary>
         /// 获取历史图片URL的函数
         /// </summary>
@@ -89,8 +91,15 @@ namespace RSJWYFamework.Runtime
             _smc.ProcedureSwitchEvent+=OnProcedureSwitchEvent;
             
             _smc.AddNode<ComfyUIPostNode>();
-            _smc.AddNode<ComfyUIWebsocketNode>();
+            _smc.AddNode<ComfyUIWaitWebsocketNode>();
             _smc.AddNode<ComfyUIDownloadResultNode>();
+            
+            _taskIDHandler.OnTaskTriggered+=OnTaskTriggered;
+        }
+
+        private void OnTaskTriggered(string benchmarkID)
+        {
+            _smc.StartNode<ComfyUIDownloadResultNode>();
         }
 
         private void OnProcedureSwitchEvent(StateNodeBase last, StateNodeBase current)
@@ -99,10 +108,11 @@ namespace RSJWYFamework.Runtime
             {
                 _steps = ComfyUITaskStatus.Post;
             }
-            else if (current is ComfyUIWebsocketNode)
+            else if (current is ComfyUIWaitWebsocketNode)
             {
                 _steps = ComfyUITaskStatus.WebsocketWait;
                 promptInfo=_smc.GetBlackboardValue<PromptInfo>("PROMPTINFO");
+                _taskIDHandler.SetBenchmarkID(promptInfo.PromptId);
             }
             else if (current is ComfyUIDownloadResultNode)
             {
@@ -136,7 +146,18 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnStart()
         {
-            _smc.StartNode<ComfyUIPostNode>();
+            UniTask.Create(async () =>
+            {
+                try
+                {
+                    await ConnectComfyUI();
+                    _smc.StartNode<ComfyUIPostNode>();
+                }
+                catch (Exception e)
+                {
+                    _smc.Terminate($"连接ComfyUI失败:{e.Message}");
+                }
+            });
         }
 
         protected override void OnUpdate()
@@ -163,7 +184,7 @@ namespace RSJWYFamework.Runtime
 
         CancellationTokenSource cancellationTokenSource;
         private WebSocketClient ComfyUIWSClient;
-         public async UniTask ConnectComfyUI()
+        public async UniTask ConnectComfyUI()
         {
             ComfyUIWSClient?.Dispose();
             try

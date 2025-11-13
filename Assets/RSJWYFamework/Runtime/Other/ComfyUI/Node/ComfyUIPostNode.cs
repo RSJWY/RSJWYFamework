@@ -93,7 +93,7 @@ namespace RSJWYFamework.Runtime.Node
                         // 解析JSON响应
                         promptInfo = JsonConvert.DeserializeObject<PromptInfo>(responseText);
                         SetBlackboardValue("PROMPTINFO", promptInfo);
-                        SwitchToNode<ComfyUIWebsocketNode>();
+                        SwitchToNode<ComfyUIWaitWebsocketNode>();
                     }
                     else
                     {

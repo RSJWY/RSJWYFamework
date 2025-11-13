@@ -14,7 +14,7 @@ namespace RSJWYFamework.Runtime
     {
         public AppConfig AppConfig { get; private set; }
 
-        public string JsonConfigPath = Application.streamingAssetsPath;
+        public readonly string JsonConfigPath = Application.streamingAssetsPath;
         public ConcurrentDictionary<string,JObject> JsonConfigDict { get; private set; } = new ConcurrentDictionary<string, JObject>();
 
         /// <summary>
@@ -110,6 +110,35 @@ namespace RSJWYFamework.Runtime
                 return;
             }
             ModuleManager.GetModule<DataManager>().AddDataSB(AppConfig);
+            try
+            {
+                if (Directory.Exists(JsonConfigPath))
+                {
+                    var files = Directory.GetFiles(JsonConfigPath, "*.json", SearchOption.TopDirectoryOnly);
+                    foreach (var path in files)
+                    {
+                        try
+                        {
+                            var json = File.ReadAllText(path);
+                            var obj = JObject.Parse(json);
+                            var name = Path.GetFileNameWithoutExtension(path);
+                            JsonConfigDict[name] = obj;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError($"解析JSON失败，路径：{path}，错误：{ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    AppLogger.Warning($"StreamingAssets路径不存在：{JsonConfigPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"遍历StreamingAssets失败，路径：{JsonConfigPath}，错误：{ex.Message}");
+            }
         }
 
         public override void Shutdown()
