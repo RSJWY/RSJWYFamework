@@ -54,14 +54,22 @@ namespace RSJWYFamework.Runtime
         {
             if (!_initialized)
             {
-                var _all= GameObject.FindObjectsOfType<ModuleManager>();
-                if( _all.Length!=0)
+                var managers = GameObject.FindObjectsOfType<ModuleManager>();
+                if (managers.Length > 1)
                 {
                     throw new AppException("场景中存在多个管理器！！初始化终止");
                 }
-                var _manager = new GameObject("[ModuleManager]");
-                _manager.AddComponent<ModuleManager>();
-                DontDestroyOnLoad( _manager );
+                GameObject managerObj;
+                if (managers.Length == 1)
+                {
+                    managerObj = managers[0].gameObject;
+                }
+                else
+                {
+                    managerObj = new GameObject("[ModuleManager]");
+                    managerObj.AddComponent<ModuleManager>();
+                }
+                DontDestroyOnLoad(managerObj);
                 
                 // 初始化依赖解析器
                 ModuleDependencyResolver.Initialize();
@@ -99,24 +107,40 @@ namespace RSJWYFamework.Runtime
                 // 按正确顺序注册模块
                 foreach (var type in orderedModuleTypes)
                 {
-                    IModule moduleInstance;
-                    // 检查是否为MonoBehaviour
+                    if (Modules.ContainsKey(type))
+                    {
+                        continue;
+                    }
+                    IModule moduleInstance = null;
                     if (typeof(MonoBehaviour).IsAssignableFrom(type))
                     {
-                        var managerObj = GameObject.Find("[ModuleManager]");
-                        if (managerObj == null)
+                        var existing = UnityEngine.Object.FindObjectsOfType(type);
+                        if (existing != null && existing.Length > 1)
                         {
-                            throw new AppException("找不到 ModuleManager 对象");
+                            throw new AppException($"场景中预置了多个相同模块：{type.Name}");
                         }
-                        var moduleGO = new GameObject($"[Module]{type.Name}");
-                        moduleGO.transform.parent = managerObj.transform;
-                        moduleInstance = moduleGO.AddComponent(type) as IModule;
+                        if (existing != null && existing.Length == 1)
+                        {
+                            moduleInstance = existing[0] as IModule;
+                            var comp = existing[0] as MonoBehaviour;
+                            if (comp != null && comp.transform.parent != managerObj.transform)
+                            {
+                                comp.transform.SetParent(managerObj.transform, false);
+                                comp.gameObject.name = $"[Module]{type.Name}";
+                            }
+                        }
+                        else
+                        {
+                            var moduleGO = new GameObject($"[Module]{type.Name}");
+                            moduleGO.transform.parent = managerObj.transform;
+                            moduleInstance = moduleGO.AddComponent(type) as IModule;
+                        }
                     }
                     else
                     {
                         moduleInstance = Activator.CreateInstance(type) as IModule;
                     }
-                    AddModule(moduleInstance,type);
+                    AddModule(moduleInstance, type);
                 }
                 
                 _initialized=true;
@@ -155,13 +179,13 @@ namespace RSJWYFamework.Runtime
             // 检查是否为MonoBehaviour
             if (typeof(MonoBehaviour).IsAssignableFrom(type))
             {
-                var managerObj = GameObject.Find("[ModuleManager]");
-                if (managerObj == null)
+                var manager = UnityEngine.Object.FindObjectOfType<ModuleManager>();
+                if (manager == null)
                 {
                     throw new AppException("找不到 ModuleManager 对象");
                 }
                 var moduleGO = new GameObject($"[Module]{type.Name}");
-                moduleGO.transform.parent = managerObj.transform;
+                moduleGO.transform.parent = manager.transform;
                 moduleInstance = moduleGO.AddComponent(type) as IModule;
             }
             else
@@ -194,6 +218,20 @@ namespace RSJWYFamework.Runtime
             {
                 AppLogger.Warning($"模块 {type.Name} 已存在，跳过添加。");
                 return;
+            }
+            var mono = module as MonoBehaviour;
+            if (mono != null)
+            {
+                var manager = UnityEngine.Object.FindObjectOfType<ModuleManager>();
+                if (manager == null)
+                {
+                    throw new AppException("找不到 ModuleManager 对象");
+                }
+                if (mono.transform.parent != manager.transform)
+                {
+                    mono.transform.SetParent(manager.transform, false);
+                    mono.gameObject.name = $"[Module]{type.Name}";
+                }
             }
             AddLife(module);
             //添加
