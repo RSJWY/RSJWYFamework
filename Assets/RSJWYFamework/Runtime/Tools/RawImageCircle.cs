@@ -65,5 +65,16 @@ namespace RSJWYFamework.Runtime
                 id++;
             }
         }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            if (texture != null)
+            {
+                var t = texture;
+                texture = null;
+                Resources.UnloadAsset(t);
+            }
+        }
     }
 }

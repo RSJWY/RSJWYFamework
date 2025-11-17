@@ -180,5 +180,16 @@ namespace RSJWYFamework.Runtime
  
             return base.Raycast(sp, eventCamera);
         }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            if (material != null)
+            {
+                var m = material;
+                material = null;
+                Destroy(m);
+            }
+        }
     }
 }

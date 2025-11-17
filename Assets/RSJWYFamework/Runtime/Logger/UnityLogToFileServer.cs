@@ -4,6 +4,8 @@ using System;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using RSJWYFamework.Runtime;
+using System.IO;
+using System.Globalization;
 using LogLevel = TouchSocket.Core.LogLevel;
 
 /// <summary>
@@ -50,12 +52,48 @@ public static class UnityLoggerBridge
                 Debug.LogError($"捕获到UniTask任务中未处理的异常信息：{e}");
             };
             _isInitialized = true;
-
+            CleanupOldLogFolders();
             Debug.Log($"[UnityLoggerBridge] 初始化成功，日志路径：{Application.streamingAssetsPath}/{LogDirectory}");
         }
         catch (Exception e)
         {
             Debug.LogError($"[UnityLoggerBridge] 初始化失败：{e.Message}");
+        }
+    }
+
+    private static void CleanupOldLogFolders()
+    {
+        try
+        {
+            var basePath = $"{Application.streamingAssetsPath}/{LogDirectory}";
+            if (!Directory.Exists(basePath))
+            {
+                return;
+            }
+            var thresholdDate = DateTime.Now.AddMonths(-1).Date;
+            foreach (var dir in Directory.EnumerateDirectories(basePath))
+            {
+                var name = Path.GetFileName(dir);
+                if (DateTime.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dirDate))
+                {
+                    if (dirDate.Date < thresholdDate)
+                    {
+                        try
+                        {
+                            Directory.Delete(dir, true);
+                            Debug.Log($"[UnityLoggerBridge] 已删除过期日志目录：{name}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[UnityLoggerBridge] 删除日志目录失败：{name}，原因：{ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[UnityLoggerBridge] 清理日志目录发生异常：{e.Message}");
         }
     }
 

@@ -15,12 +15,21 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// 日志输出等级
         /// </summary>
-        public static LogLevel currentLogLevel = LogLevel.Warning;
+        public static LogLevel currentLogLevel = LogLevel.Log;
+        /// <summary>
+        /// 是否启用指定日志等级
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        private static bool Enabled(LogLevel level)
+        {
+            return currentLogLevel != LogLevel.None && level >= currentLogLevel;
+        }
 
         [HideInCallstack]
         public static void Log(string info)
         {
-            if (currentLogLevel < LogLevel.Log) return;
+            if (!Enabled(LogLevel.Log)) return;
             Debug.Log(info);
         }
 
@@ -30,7 +39,7 @@ namespace RSJWYFamework.Runtime
         [HideInCallstack]
         public static void Warning(string info)
         {
-            if (currentLogLevel < LogLevel.Warning) return;
+            if (!Enabled(LogLevel.Warning)) return;
             Debug.LogWarning(info);
         }
         /// <summary>
@@ -39,7 +48,7 @@ namespace RSJWYFamework.Runtime
         [HideInCallstack]
         public static void Error(string info)
         {
-            if (currentLogLevel < LogLevel.Error) return;
+            if (!Enabled(LogLevel.Error)) return;
             Debug.LogError(info);
         }
 
@@ -49,7 +58,7 @@ namespace RSJWYFamework.Runtime
         [HideInCallstack]
         public static void Exception(System.Exception exception)
         {
-            if (currentLogLevel < LogLevel.Exception) return;
+            if (!Enabled(LogLevel.Exception)) return;
             Debug.LogException(exception);
         }
     }

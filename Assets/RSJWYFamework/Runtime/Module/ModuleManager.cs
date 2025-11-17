@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace RSJWYFamework.Runtime
 {
@@ -70,6 +71,7 @@ namespace RSJWYFamework.Runtime
                     managerObj.AddComponent<ModuleManager>();
                 }
                 DontDestroyOnLoad(managerObj);
+                SceneManager.sceneLoaded += OnSceneLoaded;
                 
                 // 初始化依赖解析器
                 ModuleDependencyResolver.Initialize();
@@ -105,6 +107,9 @@ namespace RSJWYFamework.Runtime
                 AppLogger.Log($"模块初始化顺序：{string.Join(" -> ", orderedModuleTypes.Select(t => t.Name))}");
                 
                 // 按正确顺序注册模块
+                var preplaced = new List<string>();
+                var autoAdded = new List<string>();
+                var removedDuplicates = new List<string>();
                 foreach (var type in orderedModuleTypes)
                 {
                     if (Modules.ContainsKey(type))
@@ -115,11 +120,7 @@ namespace RSJWYFamework.Runtime
                     if (typeof(MonoBehaviour).IsAssignableFrom(type))
                     {
                         var existing = UnityEngine.Object.FindObjectsOfType(type);
-                        if (existing != null && existing.Length > 1)
-                        {
-                            throw new AppException($"场景中预置了多个相同模块：{type.Name}");
-                        }
-                        if (existing != null && existing.Length == 1)
+                        if (existing != null && existing.Length > 0)
                         {
                             moduleInstance = existing[0] as IModule;
                             var comp = existing[0] as MonoBehaviour;
@@ -128,23 +129,135 @@ namespace RSJWYFamework.Runtime
                                 comp.transform.SetParent(managerObj.transform, false);
                                 comp.gameObject.name = $"[Module]{type.Name}";
                             }
+                            preplaced.Add(type.Name);
+                            if (existing.Length > 1)
+                            {
+                                for (int i = 1; i < existing.Length; i++)
+                                {
+                                    var dup = existing[i] as MonoBehaviour;
+                                    if (dup != null)
+                                    {
+                                        UnityEngine.Object.Destroy(dup.gameObject);
+                                    }
+                                }
+                                removedDuplicates.Add(type.Name);
+                            }
                         }
                         else
                         {
                             var moduleGO = new GameObject($"[Module]{type.Name}");
                             moduleGO.transform.parent = managerObj.transform;
                             moduleInstance = moduleGO.AddComponent(type) as IModule;
+                            autoAdded.Add(type.Name);
                         }
                     }
                     else
                     {
                         moduleInstance = Activator.CreateInstance(type) as IModule;
+                        autoAdded.Add(type.Name);
                     }
                     AddModule(moduleInstance, type);
                 }
                 
                 _initialized=true;
                 AppLogger.Log($"初始化模块管理器完成！模块数量为：{Modules.Count}，生命周期已存在数量为：{Lifes.Count}，生命周期等待添加数量：{_pendingLifeAdds.Count}");
+                if (preplaced.Count > 0)
+                {
+                    AppLogger.Log($"场景预置模块：{string.Join(", ", preplaced)}");
+                }
+                if (autoAdded.Count > 0)
+                {
+                    AppLogger.Log($"自动添加模块：{string.Join(", ", autoAdded)}");
+                }
+                if (removedDuplicates.Count > 0)
+                {
+                    AppLogger.Warning($"检测到重复预置并已移除：{string.Join(", ", removedDuplicates)}");
+                }
+            }
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var allModuleTypes = assemblies
+                .SelectMany(a => a.GetTypes())
+                .Where(t=> t.IsDefined(typeof(ModuleAttribute), false) &&
+                              typeof(IModule).IsAssignableFrom(t) &&
+                              !t.IsAbstract &&
+                              !t.IsInterface &&
+                              !t.IsGenericType)
+                .ToList();
+            var manager = UnityEngine.Object.FindObjectOfType<ModuleManager>();
+            if (manager == null) return;
+            var preplacedInScene = new List<string>();
+            var autoAddedInScene = new List<string>();
+            var removedDupInScene = new List<string>();
+            foreach (var type in allModuleTypes)
+            {
+                if (typeof(MonoBehaviour).IsAssignableFrom(type))
+                {
+                    var existing = UnityEngine.Object.FindObjectsOfType(type);
+                    var inScene = existing
+                        .Cast<MonoBehaviour>()
+                        .Where(m => m.gameObject.scene == scene)
+                        .ToArray();
+                    if (inScene.Length > 0)
+                    {
+                        if (Modules.ContainsKey(type))
+                        {
+                            for (int i = 0; i < inScene.Length; i++)
+                            {
+                                var dup = inScene[i];
+                                UnityEngine.Object.Destroy(dup.gameObject);
+                            }
+                            removedDupInScene.Add(type.Name);
+                        }
+                        else
+                        {
+                            var comp = inScene[0];
+                            var moduleInstance = comp as IModule;
+                            if (moduleInstance != null)
+                            {
+                                comp.transform.SetParent(manager.transform, false);
+                                comp.gameObject.name = $"[Module]{type.Name}";
+                                AddModule(moduleInstance, type);
+                                preplacedInScene.Add(type.Name);
+                                for (int i = 1; i < inScene.Length; i++)
+                                {
+                                    var dup = inScene[i];
+                                    UnityEngine.Object.Destroy(dup.gameObject);
+                                }
+                                if (inScene.Length > 1)
+                                {
+                                    removedDupInScene.Add(type.Name);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!Modules.ContainsKey(type))
+                        {
+                            var moduleGO = new GameObject($"[Module]{type.Name}");
+                            moduleGO.transform.parent = manager.transform;
+                            var moduleInstance = moduleGO.AddComponent(type) as IModule;
+                            AddModule(moduleInstance, type);
+                            autoAddedInScene.Add(type.Name);
+                        }
+                    }
+                }
+            }
+            if (preplacedInScene.Count > 0)
+            {
+                AppLogger.Log($"场景[{scene.name}]预置模块：{string.Join(", ", preplacedInScene)}");
+            }
+            if (autoAddedInScene.Count > 0)
+            {
+                AppLogger.Log($"场景[{scene.name}]自动添加模块：{string.Join(", ", autoAddedInScene)}");
+            }
+            if (removedDupInScene.Count > 0)
+            {
+                AppLogger.Warning($"场景[{scene.name}]检测到重复预置并已移除：{string.Join(", ", removedDupInScene)}");
             }
         }
         
