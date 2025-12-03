@@ -97,8 +97,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
-#忽略插件，存在付费插件和开发者独有插件
-/[Aa]ssets/[Pp]lugins/*
 #忽略热更代码目录
 /HybridCLRData
 #忽略YooAsset示例

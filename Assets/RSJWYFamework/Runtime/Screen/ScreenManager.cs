@@ -7,7 +7,9 @@ namespace RSJWYFamework.Runtime
     [Module] [ModuleDependency(typeof(AppConfigManager))]
     public class ScreenManager:ModuleBase
     {
-        // 当前鼠标是否处于捕获锁定状态
+        /// <summary>
+        /// 当前鼠标是否处于捕获锁定状态
+        /// </summary>
         public bool isMouseCaptured = false;
         public override void Initialize()
         {
@@ -19,7 +21,11 @@ namespace RSJWYFamework.Runtime
             
             CWinScreen.HandlerInit();
             CWinScreen.SetWindsPos(CWinScreen.windowHandle, screenJson.ScreenX, screenJson.ScreenY, screenJson.ScreenWid, screenJson.ScreenHei);
-            CaptureMouse();
+            bool captureOnInit = screenJson.CaptureMouseOnInit;
+            if (captureOnInit)
+            {
+                CaptureMouse();
+            }
         }
 
         public override void LifeUpdate()
@@ -44,11 +50,17 @@ namespace RSJWYFamework.Runtime
         {
             if (hasFocus)
             {
-                CaptureMouse();
+                if (isMouseCaptured)
+                {
+                    CaptureMouse();
+                }
             }
             else
             {
-                ReleaseMouse();
+                if (isMouseCaptured)
+                {
+                    ReleaseMouse();
+                }
             }
         }
 
@@ -99,5 +111,9 @@ namespace RSJWYFamework.Runtime
         public int ScreenWid { get; private set; }
         [JsonProperty("Height")]
         public int ScreenHei { get; private set; }
+        
+        [JsonProperty("CaptureMouseOnInit")]
+        public bool CaptureMouseOnInit { get; private set; } = true;
     }
 }
+
