@@ -349,7 +349,14 @@ namespace RSJWYFamework.Runtime
             AddLife(module);
             //添加
             Modules[type] = module;
-            module.Initialize();
+            try
+            {
+                module.Initialize();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Exception(new AppException($"模块 {type.Name} 初始化时发生异常", ex));
+            }
             AppLogger.Log($"添加模块：{type.Name}");
         }
         
@@ -368,8 +375,14 @@ namespace RSJWYFamework.Runtime
         {
             if (Modules.TryGetValue(type, out var module))
             {
-                // 先调用模块的Shutdown方法
-                module.Shutdown();
+                try
+                {
+                    module.Shutdown();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Exception(new AppException($"模块 {type.Name} 关闭时发生异常", ex));
+                }
                 // 从生命周期中移除
                 RemoveLife(module);
                 // 从模块字典中移除
@@ -445,7 +458,7 @@ namespace RSJWYFamework.Runtime
                 {
                     Lifes.Add(_pendingLifeAdds.Dequeue());
                 }
-                Lifes.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+                Lifes.Sort((a, b) => GetSafePriority(a).CompareTo(GetSafePriority(b)));
             }
         }
         
@@ -677,7 +690,7 @@ namespace RSJWYFamework.Runtime
         {
             // 按照优先级倒序关闭模块，确保依赖关系正确
             var moduleList = Modules.Values.ToList();
-            moduleList.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            moduleList.Sort((a, b) => GetSafePriority(b).CompareTo(GetSafePriority(a)));
             
             foreach (var module in moduleList)
             {
@@ -689,6 +702,19 @@ namespace RSJWYFamework.Runtime
                 {
                     AppLogger.Exception(new AppException($"模块 {module.GetType().Name} 关闭时发生异常", ex));
                 }
+            }
+        }
+
+        private static int GetSafePriority(ILife life)
+        {
+            try
+            {
+                return life.Priority;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Exception(new AppException($"模块 {life.GetType().Name} 访问 Priority 时发生异常", ex));
+                return 0;
             }
         }
 

@@ -41,7 +41,7 @@ namespace RSJWYFamework.Runtime
             }
 
             /// <summary>
-            /// 生成V2认证字符串（含签名）
+            /// 生成V1认证字符串（含签名）
             /// </summary>
             /// <param name="accessKeyId">Access Key ID</param>
             /// <param name="secretAccessKey">Secret Access Key</param>
@@ -49,10 +49,9 @@ namespace RSJWYFamework.Runtime
             /// <param name="uriPath">请求URI路径（如/example/测试）</param>
             /// <param name="queryParameters">查询参数字典</param>
             /// <param name="headers">请求头字典</param>
-            /// <param name="region">区域（如bj，小写）</param>
-            /// <param name="service">服务名（如bos，小写）</param>
-            /// <param name="date">UTC日期（格式yyyymmdd，如20250101）</param>
-            /// <returns>完整V2认证字符串</returns>
+            /// <param name="timestamp">UTC时间戳（格式yyyy-MM-ddTHH:mm:ssZ）</param>
+            /// <param name="expirationInSeconds">过期时间（秒），默认1800</param>
+            /// <returns>完整V1认证字符串</returns>
             public static string GenerateAuthString(
                 string accessKeyId,
                 string secretAccessKey,
@@ -60,15 +59,15 @@ namespace RSJWYFamework.Runtime
                 string uriPath,
                 Dictionary<string, string> queryParameters,
                 Dictionary<string, string> headers,
-                string region,
-                string service,
-                string date)
+                string timestamp,
+                int expirationInSeconds = 1800)
             {
                 // 1. 生成规范请求
                 string canonicalRequest = BuildCanonicalRequest(httpMethod, uriPath, queryParameters, headers);
 
                 // 2. 生成签名密钥
-                string authStringPrefix = $"bce-auth-v2/{accessKeyId}/{date}/{region}/{service}";
+                // V1格式: bce-auth-v1/{accessKeyId}/{timestamp}/{expirationPeriodInSeconds}
+                string authStringPrefix = $"bce-auth-v1/{accessKeyId}/{timestamp}/{expirationInSeconds}";
                 string signingKey = HmacSha256Hex(secretAccessKey, authStringPrefix);
 
                 // 3. 生成签名
@@ -78,7 +77,7 @@ namespace RSJWYFamework.Runtime
                 string signedHeaders = GetSignedHeaders(headers);
 
                 // 5. 拼接完整认证字符串
-                return $"bce-auth-v2/{accessKeyId}/{date}/{region}/{service}/{signedHeaders}/{signature}";
+                return $"{authStringPrefix}/{signedHeaders}/{signature}";
             }
 
             /// <summary>
