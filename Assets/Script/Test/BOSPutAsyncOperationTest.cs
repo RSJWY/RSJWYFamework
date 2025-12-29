@@ -103,7 +103,7 @@ namespace Script.Test
                 Debug.Log($"目标路径: bos://{bucketName}/{objectKey}");
                 
                 // 调用BOS上传方法
-                string result = await BOSAsync.UploadFileAsync(
+                var result = await BOSAsync.UploadFileAsync(
                     accessKeyId, 
                     secretAccessKey, 
                     bucketName, 
@@ -114,7 +114,7 @@ namespace Script.Test
                 );
                 
                 // 输出结果
-                if (result.Contains("上传成功"))
+                if (result.success)
                 {
                     Debug.Log($"<color=green>上传成功!</color>\n{result}");
                 }
@@ -189,7 +189,7 @@ namespace Script.Test
                 
                 Debug.Log($"开始上传图片文件: {imagePath}");
                 
-                string result = await BOSAsync.UploadFileAsync(
+                var result = await BOSAsync.UploadFileAsync(
                     accessKeyId, 
                     secretAccessKey, 
                     bucketName, 
@@ -199,7 +199,7 @@ namespace Script.Test
                     storageClass
                 );
                 
-                if (result.Contains("上传成功"))
+                if (result.success)
                 {
                     Debug.Log($"<color=green>图片上传成功!</color>\n{result}");
                 }
