@@ -1,28 +1,43 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 using Random = UnityEngine.Random;
  
 public class Painting : MonoBehaviour
 {
- 
+    private class Stroke
+    {
+        public Vector3 startPosition = Vector3.zero;
+        public float lastDistance;
+        public float brushScale = 0.5f;
+        
+        // For TwoOrderBézierCurse
+        public Vector3[] PositionArray = new Vector3[3];
+        public int a = 0;
+        
+        // For ThreeOrderBézierCurse
+        public Vector3[] PositionArray1 = new Vector3[4];
+        public int b = 0;
+        public float[] speedArray = new float[4];
+        public int s = 0;
+    }
+
     private RenderTexture texRender;   //画布
     public Material mat;     //给定的shader新建材质
     public Texture brushTypeTexture;   //画笔纹理，半透明
     private Camera mainCamera;
-    public float brushScale = 0.5f;
+    public float brushScale = 0.5f; // Keep for inspector or default, though strokes have their own
     [Range(0.1f, 5.0f)]
     public float brushSizeMultiplier = 1.0f;
     public Color brushColor = Color.black;
     public RawImage raw;                   //使用UGUI的RawImage显示，方便进行添加UI,将pivot设为(0.5,0.5)
-    private float lastDistance;
-    private Vector3[] PositionArray = new Vector3[3];
-    private int a = 0;
-    private Vector3[] PositionArray1 = new Vector3[4];
-    private int b = 0;
-    private float[] speedArray = new float[4];
-    private int s = 0;
+    
     public int num = 50;
     public Vector2 texRenderResolution;
+    
+    public bool isInputEnabled = true;
+
+    private Dictionary<int, Stroke> activeStrokes = new Dictionary<int, Stroke>();
 
     void Start()
     {
@@ -36,6 +51,7 @@ public class Painting : MonoBehaviour
         
         InitPaintingImage();
     }
+
     public void InitPaintingImage()
     {
         RenderTexture.active = texRender; // 设置活动渲染纹理
@@ -45,35 +61,34 @@ public class Painting : MonoBehaviour
         RenderTexture.active = null; // 重置活动渲染纹理
         DrawImage();
     }
-    Vector3 startPosition = Vector3.zero;
-    Vector3 endPosition = Vector3.zero;
-    public bool isInputEnabled = true;
 
     void Update()
     {
         if (!isInputEnabled) return;
 
+        // 优先处理触摸输入
         if (Input.touchCount > 0)
         {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began || touch.phase == TouchPhase.Moved || touch.phase == TouchPhase.Stationary)
+            for (int i = 0; i < Input.touchCount; i++)
             {
-                OnMouseMove(new Vector3(touch.position.x, touch.position.y, 0));
-            }
-            else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-            {
-                OnMouseUp();
+                Touch t = Input.GetTouch(i);
+                HandleInput(t.fingerId, t.position, t.phase);
             }
         }
         else
         {
-            if (Input.GetMouseButton(0))
+            // 如果没有触摸，则处理鼠标输入 (Pointer ID -1)
+            if (Input.GetMouseButtonDown(0))
             {
-                OnMouseMove(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 0));
+                HandleInput(-1, Input.mousePosition, TouchPhase.Began);
             }
-            if (Input.GetMouseButtonUp(0))
+            else if (Input.GetMouseButton(0))
             {
-                OnMouseUp();
+                HandleInput(-1, Input.mousePosition, TouchPhase.Moved);
+            }
+            else if (Input.GetMouseButtonUp(0))
+            {
+                HandleInput(-1, Input.mousePosition, TouchPhase.Ended);
             }
         }
 
@@ -83,24 +98,74 @@ public class Painting : MonoBehaviour
         }
         DrawImage();
     }
+
+    void HandleInput(int pointerId, Vector2 position, TouchPhase phase)
+    {
+        Vector3 pos = new Vector3(position.x, position.y, 0);
+
+        if (phase == TouchPhase.Began)
+        {
+            // 仅仅响应使用区域的触摸
+            if (IsPointerOverDrawingArea(position))
+            {
+                Stroke stroke = new Stroke();
+                stroke.startPosition = pos;
+                // 初始化画笔大小
+                stroke.brushScale = SetScale(0); 
+                activeStrokes[pointerId] = stroke;
+                
+                OnMouseMove(stroke, pos);
+            }
+        }
+        else if (phase == TouchPhase.Moved || phase == TouchPhase.Stationary)
+        {
+            if (activeStrokes.TryGetValue(pointerId, out Stroke stroke))
+            {
+                OnMouseMove(stroke, pos);
+            }
+        }
+        else if (phase == TouchPhase.Ended || phase == TouchPhase.Canceled)
+        {
+            if (activeStrokes.TryGetValue(pointerId, out Stroke stroke))
+            {
+                OnMouseUp(stroke);
+                activeStrokes.Remove(pointerId);
+            }
+        }
+    }
+
+    bool IsPointerOverDrawingArea(Vector2 screenPos)
+    {
+        if (raw == null) return false;
+        Camera cam = GetRawImageCamera();
+        return RectTransformUtility.RectangleContainsScreenPoint(raw.rectTransform, screenPos, cam);
+    }
+
+    Camera GetRawImageCamera()
+    {
+        if (raw.canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            return null;
+        else
+            return raw.canvas.worldCamera;
+    }
  
     public void SetInputEnabled(bool isEnabled)
     {
         isInputEnabled = isEnabled;
         if (!isEnabled)
         {
-            OnMouseUp();
+            activeStrokes.Clear();
         }
     }
 
-    void OnMouseUp()
+    void OnMouseUp(Stroke stroke)
     {
-        startPosition = Vector3.zero;
-        //brushScale = 0.5f;
-        a = 0;
-        b = 0;
-        s = 0;
+        stroke.startPosition = Vector3.zero;
+        stroke.a = 0;
+        stroke.b = 0;
+        stroke.s = 0;
     }
+
     //设置画笔宽度
     float SetScale(float distance)
     {
@@ -118,23 +183,22 @@ public class Painting : MonoBehaviour
             Scale = 0.05f;
         }
         return Scale * brushSizeMultiplier;
-        //return 0.1f;
     }
  
-    void OnMouseMove(Vector3 pos)
+    void OnMouseMove(Stroke stroke, Vector3 pos)
     {
-        if (startPosition == Vector3.zero)
+        if (stroke.startPosition == Vector3.zero)
         {
-            startPosition = pos;
+            stroke.startPosition = pos;
         }
-
-        endPosition = pos;
-        float distance = Vector3.Distance(startPosition, endPosition);
-        brushScale = SetScale(distance);
-        ThreeOrderBézierCurse(pos, distance, 0.05f);
  
-        startPosition = endPosition;
-        lastDistance = distance;
+        Vector3 endPosition = pos;
+        float distance = Vector3.Distance(stroke.startPosition, endPosition);
+        stroke.brushScale = SetScale(distance);
+        ThreeOrderBézierCurse(stroke, pos, distance, 0.05f);
+ 
+        stroke.startPosition = endPosition;
+        stroke.lastDistance = distance;
     }
  
     void Clear(RenderTexture destTexture)
@@ -156,12 +220,7 @@ public class Painting : MonoBehaviour
         Vector2 screenPoint = new Vector2(destRect.x, destRect.y);
         Vector2 localPoint;
         
-        // Find the camera responsible for the RawImage
-        Camera cam = null;
-        if (raw.canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            cam = null;
-        else
-            cam = raw.canvas.worldCamera; // Should use worldCamera for ScreenSpaceCamera or WorldSpace
+        Camera cam = GetRawImageCamera();
 
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(raw.rectTransform, screenPoint, cam, out localPoint))
         {
@@ -211,82 +270,82 @@ public class Painting : MonoBehaviour
     }
  
     //二阶贝塞尔曲线
-    public void TwoOrderBézierCurse(Vector3 pos, float distance)
+    private void TwoOrderBézierCurse(Stroke stroke, Vector3 pos, float distance)
     {
-        PositionArray[a] = pos;
-        a++;
-        if (a == 3)
+        stroke.PositionArray[stroke.a] = pos;
+        stroke.a++;
+        if (stroke.a == 3)
         {
             for (int index = 0; index < num; index++)
             {
-                Vector3 middle = (PositionArray[0] + PositionArray[2]) / 2;
-                PositionArray[1] = (PositionArray[1] - middle) / 2 + middle;
+                Vector3 middle = (stroke.PositionArray[0] + stroke.PositionArray[2]) / 2;
+                stroke.PositionArray[1] = (stroke.PositionArray[1] - middle) / 2 + middle;
  
                 float t = (1.0f / num) * index / 2;
-                Vector3 target = Mathf.Pow(1 - t, 2) * PositionArray[0] + 2 * (1 - t) * t * PositionArray[1] +
-                                 Mathf.Pow(t, 2) * PositionArray[2];
-                float deltaSpeed = (float)(distance - lastDistance) / num;
-                DrawBrush(texRender, (int)target.x, (int)target.y, brushTypeTexture, brushColor, SetScale(lastDistance + (deltaSpeed * index)));
+                Vector3 target = Mathf.Pow(1 - t, 2) * stroke.PositionArray[0] + 2 * (1 - t) * t * stroke.PositionArray[1] +
+                                 Mathf.Pow(t, 2) * stroke.PositionArray[2];
+                float deltaSpeed = (float)(distance - stroke.lastDistance) / num;
+                DrawBrush(texRender, (int)target.x, (int)target.y, brushTypeTexture, brushColor, SetScale(stroke.lastDistance + (deltaSpeed * index)));
             }
-            PositionArray[0] = PositionArray[1];
-            PositionArray[1] = PositionArray[2];
-            a = 2;
+            stroke.PositionArray[0] = stroke.PositionArray[1];
+            stroke.PositionArray[1] = stroke.PositionArray[2];
+            stroke.a = 2;
         }
         else
         {
-            DrawBrush(texRender, (int)endPosition.x, (int)endPosition.y, brushTypeTexture,
-                brushColor, brushScale);
+            DrawBrush(texRender, (int)pos.x, (int)pos.y, brushTypeTexture,
+                brushColor, stroke.brushScale);
         }
     }
     //三阶贝塞尔曲线，获取连续4个点坐标，通过调整中间2点坐标，画出部分（我使用了num/1.5实现画出部分曲线）来使曲线平滑;通过速度控制曲线宽度。
-    private void ThreeOrderBézierCurse(Vector3 pos, float distance, float targetPosOffset)
+    private void ThreeOrderBézierCurse(Stroke stroke, Vector3 pos, float distance, float targetPosOffset)
     {
         //记录坐标
-        PositionArray1[b] = pos;
-        b++;
+        stroke.PositionArray1[stroke.b] = pos;
+        stroke.b++;
         //记录速度
-        speedArray[s] = distance;
-        s++;
-        if (b == 4)
+        stroke.speedArray[stroke.s] = distance;
+        stroke.s++;
+        if (stroke.b == 4)
         {
-            Vector3 temp1 = PositionArray1[1];
-            Vector3 temp2 = PositionArray1[2];
+            Vector3 temp1 = stroke.PositionArray1[1];
+            Vector3 temp2 = stroke.PositionArray1[2];
  
             //修改中间两点坐标
-            Vector3 middle = (PositionArray1[0] + PositionArray1[2]) / 2;
-            PositionArray1[1] = (PositionArray1[1] - middle) * 1.5f + middle;
-            middle = (temp1 + PositionArray1[3]) / 2;
-            PositionArray1[2] = (PositionArray1[2] - middle) * 2.1f + middle;
+            Vector3 middle = (stroke.PositionArray1[0] + stroke.PositionArray1[2]) / 2;
+            stroke.PositionArray1[1] = (stroke.PositionArray1[1] - middle) * 1.5f + middle;
+            middle = (temp1 + stroke.PositionArray1[3]) / 2;
+            stroke.PositionArray1[2] = (stroke.PositionArray1[2] - middle) * 2.1f + middle;
  
             for (int index1 = 0; index1 < num / 1.5f; index1++)
             {
                 float t1 = (1.0f / num) * index1;
-                Vector3 target = Mathf.Pow(1 - t1, 3) * PositionArray1[0] +
-                                 3 * PositionArray1[1] * t1 * Mathf.Pow(1 - t1, 2) +
-                                 3 * PositionArray1[2] * t1 * t1 * (1 - t1) + PositionArray1[3] * Mathf.Pow(t1, 3);
+                Vector3 target = Mathf.Pow(1 - t1, 3) * stroke.PositionArray1[0] +
+                                 3 * stroke.PositionArray1[1] * t1 * Mathf.Pow(1 - t1, 2) +
+                                 3 * stroke.PositionArray1[2] * t1 * t1 * (1 - t1) + stroke.PositionArray1[3] * Mathf.Pow(t1, 3);
                 //float deltaspeed = (float)(distance - lastDistance) / num;
                 //获取速度差值（存在问题，参考）
-                float deltaspeed = (float)(speedArray[3] - speedArray[0]) / num;
+                float deltaspeed = (float)(stroke.speedArray[3] - stroke.speedArray[0]) / num;
                 //float randomOffset = Random.Range(-1/(speedArray[0] + (deltaspeed * index1)), 1 / (speedArray[0] + (deltaspeed * index1)));
                 //模拟毛刺效果
                 float randomOffset = Random.Range(-targetPosOffset, targetPosOffset);
-                DrawBrush(texRender, (int)(target.x + randomOffset), (int)(target.y + randomOffset), brushTypeTexture, brushColor, SetScale(speedArray[0] + (deltaspeed * index1)));
+                DrawBrush(texRender, (int)(target.x + randomOffset), (int)(target.y + randomOffset), brushTypeTexture, brushColor, SetScale(stroke.speedArray[0] + (deltaspeed * index1)));
             }
  
-            PositionArray1[0] = temp1;
-            PositionArray1[1] = temp2;
-            PositionArray1[2] = PositionArray1[3];
+            stroke.PositionArray1[0] = temp1;
+            stroke.PositionArray1[1] = temp2;
+            stroke.PositionArray1[2] = stroke.PositionArray1[3];
  
-            speedArray[0] = speedArray[1];
-            speedArray[1] = speedArray[2];
-            speedArray[2] = speedArray[3];
-            b = 3;
-            s = 3;
+            stroke.speedArray[0] = stroke.speedArray[1];
+            stroke.speedArray[1] = stroke.speedArray[2];
+            stroke.speedArray[2] = stroke.speedArray[3];
+            stroke.b = 3;
+            stroke.s = 3;
         }
         else
         {
-            DrawBrush(texRender, (int)endPosition.x, (int)endPosition.y, brushTypeTexture,
-                brushColor, brushScale);
+            DrawBrush(texRender, (int)pos.x, (int)pos.y, brushTypeTexture,
+                brushColor, stroke.brushScale);
         }
  
     }
