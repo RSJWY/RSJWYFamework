@@ -7,7 +7,7 @@ namespace License
     public static class LicenseManager
     {
         
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void CheckLicense()
         {
             if (!LicenseVerifier.Instance.IsLicenseValid())
