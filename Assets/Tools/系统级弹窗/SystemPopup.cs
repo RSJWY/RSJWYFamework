@@ -36,8 +36,14 @@ namespace Utils
             #elif UNITY_STANDALONE_WIN
             // 在 Windows 平台使用系统原生弹窗
             // hWnd: 0 (IntPtr.Zero) 表示无特定父窗口
-            // type: 0 表示 MB_OK (只有一个确定按钮)
-            MessageBox(IntPtr.Zero, content, title, 0);
+            // type: 0x00000000 (MB_OK) | 0x00040000 (MB_TOPMOST) | 0x00002000 (MB_TASKMODAL)
+            // MB_TOPMOST: 确保弹窗在所有窗口之上
+            // MB_TASKMODAL: 暂停当前应用程序，直到用户响应弹窗
+            const uint MB_OK = 0x00000000;
+            const uint MB_TOPMOST = 0x00040000;
+            const uint MB_TASKMODAL = 0x00002000;
+            
+            MessageBox(IntPtr.Zero, content, title, MB_OK | MB_TOPMOST | MB_TASKMODAL);
             
             // MessageBox 是阻塞调用，窗口关闭后才会执行到这里
             onConfirm?.Invoke();
