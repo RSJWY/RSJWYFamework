@@ -20,6 +20,7 @@ public static class UnityLoggerBridge
     public static string LogDirectory { get; set; } = "Logs";
     public static int MaxFileSize { get; set; } = 1024 * 1024; // 1MB
     public static LogLevel LogLevel { get; set; } = LogLevel.Trace;
+    public static int MaxLogRetentionDays { get; set; } = 3; // 日志保留天数
     
 
     /// <summary>
@@ -31,6 +32,10 @@ public static class UnityLoggerBridge
 
         try
         {
+            
+            // 清理过期日志
+            CleanUpOldLogs();
+
             // 初始化TouchSocket日志器
             _fileLogger = new FileLogger
             {
@@ -94,6 +99,34 @@ public static class UnityLoggerBridge
         catch (Exception e)
         {
             Debug.LogWarning($"[UnityLoggerBridge] 清理日志目录发生异常：{e.Message}");
+        }
+    }
+    private static void CleanUpOldLogs()
+    {
+        try
+        {
+            string rootPath = $"{Application.streamingAssetsPath}/{LogDirectory}";
+            if (!System.IO.Directory.Exists(rootPath)) return;
+
+            var directories = System.IO.Directory.GetDirectories(rootPath);
+            var now = DateTime.Now.Date;
+            
+            foreach (var dir in directories)
+            {
+                var dirName = System.IO.Path.GetFileName(dir);
+                if (DateTime.TryParse(dirName, out DateTime logDate))
+                {
+                    if ((now - logDate).TotalDays > MaxLogRetentionDays)
+                    {
+                        System.IO.Directory.Delete(dir, true);
+                        Debug.Log($"[UnityLoggerBridge] 已清理过期日志: {dirName}");
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[UnityLoggerBridge] 清理日志失败: {e.Message}");
         }
     }
 
