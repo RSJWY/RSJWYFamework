@@ -20,7 +20,7 @@ namespace License
                     #else
                     Application.Quit();
                     #endif
-                });
+                }, true); // 启用自动复制
             }
             else
             {

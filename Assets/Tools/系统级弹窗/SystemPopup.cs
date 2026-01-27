@@ -24,8 +24,15 @@ namespace Utils
         /// <param name="content">弹窗显示的内容</param>
         /// <param name="title">弹窗标题，默认为"提示"</param>
         /// <param name="onConfirm">点击确定按钮后的回调</param>
-        public static void Show(string content, string title = "提示", Action onConfirm = null)
+        /// <param name="copyToClipboard">是否自动将内容复制到剪贴板</param>
+        public static void Show(string content, string title = "提示", Action onConfirm = null, bool copyToClipboard = false)
         {
+            if (copyToClipboard)
+            {
+                GUIUtility.systemCopyBuffer = content;
+                content += "\n\n(内容已自动复制到剪贴板)";
+            }
+
             #if UNITY_EDITOR
             // 在编辑器中使用 Unity 自带的弹窗
             // DisplayDialog 返回 true 表示点击了 ok 按钮
