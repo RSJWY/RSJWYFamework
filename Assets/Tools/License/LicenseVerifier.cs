@@ -334,7 +334,8 @@ namespace License
             // 决策逻辑: 仅对比 SystemTime 和 LastTime
             
             // 允许 1 分钟的误差
-            if (sysTime < lastTime.AddMinutes(-1))
+            // 增加 lastTicks > 0 判断，防止 lastTime 为 MinValue 时 AddMinutes(-1) 抛出异常
+            if (lastTicks > 0 && sysTime < lastTime.AddMinutes(-1))
             {
                 errorMsg = $"系统时间异常。检测到时间回溯。请检查系统时间或连接网络。\n系统: {sysTime}\n记录: {lastTime}";
                 trustedTime = sysTime; 
