@@ -35,6 +35,7 @@ namespace RSJWYFamework.Runtime.Node
             if(!result.Success)
             {
                 Machine.Stop(500,$"获取历史图片URL失败！错误：{result.Error ?? "未知错误"}");
+                return;
             }
             var texture=await DownloadImage(result.ImageURL);
             if(texture==null)
