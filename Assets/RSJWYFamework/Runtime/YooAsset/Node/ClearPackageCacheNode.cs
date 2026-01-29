@@ -16,34 +16,19 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-
-        public override  void OnEnter(StateNodeBase nextProcedureBase)
+        public override  async UniTask OnEnter(StateNodeBase nextProcedureBase)
         {
-            UniTask.Create(async () =>
-            {
-                AppLogger.Log($"清理未使用的缓存文件");
-                var packageName = (string)_sm.GetBlackboardValue("PackageName");
-                var package = YooAssets.GetPackage(packageName);
-                var operation = package.ClearCacheFilesAsync(EFileClearMode.ClearUnusedBundleFiles);
-                operation.Completed += Operation_Completed;
-                await operation.ToUniTask();
-                _sm.SwitchNode<UpdaterDoneNode>();
-            });
+            AppLogger.Log($"清理未使用的缓存文件");
+            var packageName = (string)_sm.GetBlackboardValue("PackageName");
+            var package = YooAssets.GetPackage(packageName);
+            var operation = package.ClearCacheFilesAsync(EFileClearMode.ClearUnusedBundleFiles);
+            operation.Completed += Operation_Completed;
+            await operation.ToUniTask();
+            _sm.SwitchNode<UpdaterDoneNode>();
         }
         private void Operation_Completed(YooAsset.AsyncOperationBase obj)
         {
            
-        }
-        public override  void OnLeave(StateNodeBase lastProcedureBase, bool isRestarting = false)
-        {;
-        }
-
-        public override  void OnUpdate()
-        {
-        }
-
-        public override  void OnUpdateSecond()
-        {
         }
         
     }

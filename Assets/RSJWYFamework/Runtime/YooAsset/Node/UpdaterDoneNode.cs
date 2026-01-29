@@ -1,4 +1,6 @@
 
+using Cysharp.Threading.Tasks;
+
 namespace RSJWYFamework.Runtime
 {
     /// <summary>
@@ -16,26 +18,13 @@ namespace RSJWYFamework.Runtime
             
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             var packageName = (string)_sm.GetBlackboardValue("PackageName");
             AppLogger.Log($"完成包{packageName}更新流程");
             _sm.Stop(0,$"完成包{packageName}更新流程");
+            return UniTask.CompletedTask;
         }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-            
-        }
-
-        public override void OnUpdate()
-        {
-           
-        }
-
-        public override void OnUpdateSecond()
-        {
-            
-        }
+        
     }
 }

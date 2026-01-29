@@ -19,14 +19,9 @@ namespace RSJWYFamework.Runtime.Node
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            DownloadImageURL().Forget();
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-            
+            await DownloadImageURL();
         }
 
         private async UniTask DownloadImageURL()

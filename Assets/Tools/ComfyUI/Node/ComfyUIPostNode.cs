@@ -37,7 +37,7 @@ namespace RSJWYFamework.Runtime.Node
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             // 1. 创建主JSON对象
             JObject mainJson = new JObject();
@@ -47,9 +47,9 @@ namespace RSJWYFamework.Runtime.Node
             // 2. 转换为字符串
             postJson = mainJson.ToString();
             
-            PostJson().Forget();
+            await PostJson();
         }
-        private async UniTaskVoid PostJson()
+        private async UniTask PostJson()
         {
             using (var httpClient = new HttpClient())
             {
@@ -100,10 +100,6 @@ namespace RSJWYFamework.Runtime.Node
                     Machine.Stop(500, $"PostJson 发生异常: {e.Message}");
                 }
             }
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
         }
     }
 

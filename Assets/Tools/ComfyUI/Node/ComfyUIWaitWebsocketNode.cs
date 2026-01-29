@@ -24,14 +24,11 @@ namespace RSJWYFamework.Runtime.Node
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             waitTime = 60;
             //onnectComfyUI().Forget();
-        }
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-           
+            return UniTask.CompletedTask;
         }
 
         public override void OnUpdate()

@@ -13,14 +13,11 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            InitPackage().Forget();
+           await InitPackage();
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
 
         /// <summary>
         /// 创建初始化包

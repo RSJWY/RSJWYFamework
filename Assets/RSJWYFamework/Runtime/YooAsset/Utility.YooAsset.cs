@@ -13,7 +13,6 @@ namespace RSJWYFamework.Runtime
             public static string AppName { get; private set; } = "测试软件";
             public static string HostServerIP  { get; private set; }= "http://127.0.0.1";
             public static string AppVersion { get; private set; } = "v1.0";
-            public static int UpdatePackageVersionNumberOfRetries { get; private set; } = 3;
             
             public static int Timeout { get; private set; } = 30;
             
@@ -24,14 +23,13 @@ namespace RSJWYFamework.Runtime
 
             public static void Setting(
                 string hostServerIP = "测试工程", string projectName = "测试软件",
-                string appName = "测试软件", string appVersion = "v1.0", int updatePackageVersionNumberOfRetries = 3, 
+                string appName = "测试软件", string appVersion = "v1.0",  
                 int timeout = 30, bool appendTimeTicks = false, int downloadingMaxNum = 10, int failedTryAgainNum = 3)
             {
                 ProjectName = projectName;
                 AppName = appName;
                 HostServerIP = hostServerIP;
                 AppVersion = appVersion;
-                UpdatePackageVersionNumberOfRetries = updatePackageVersionNumberOfRetries;
                 Timeout = timeout;
                 AppendTimeTicks = appendTimeTicks;
                 FailedTryAgainNum = failedTryAgainNum;

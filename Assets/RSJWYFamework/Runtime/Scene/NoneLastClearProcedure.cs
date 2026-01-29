@@ -18,10 +18,7 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
-
+       
         protected override async UniTask LoadTransitionContentEvent(StateNodeBase last)
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
@@ -42,9 +39,6 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
 
         protected override async UniTask Deinitialization(StateNodeBase last)
         {
@@ -63,9 +57,6 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
 
         protected override async UniTask LoadSwitchToTransferSceneEvent(StateNodeBase last)
         {
@@ -87,10 +78,6 @@ namespace RSJWYFamework.Runtime
         }
 
         public override void OnClose()
-        {
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
         {
         }
 
@@ -120,10 +107,6 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
-
         public override void OnUpdate()
         {
         }
@@ -150,17 +133,6 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
-
-        public override void OnUpdate()
-        {
-        }
-
-        public override void OnUpdateSecond()
-        {
-        }
 
         protected override async UniTask SceneInit(StateNodeBase lastProcedureBase)
         {

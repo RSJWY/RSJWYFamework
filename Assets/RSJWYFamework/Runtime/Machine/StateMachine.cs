@@ -1,10 +1,24 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+
 namespace RSJWYFamework.Runtime
 {
     public class StateMachine
     {
-         public string st_Name;
+        private struct StateChangeRequest
+        {
+            public enum RequestType { Switch, Stop, Restart }
+            public RequestType Type;
+            public Type TargetNodeType;
+            public int StatusCode;
+            public string Reason;
+        }
+
+        private readonly Queue<StateChangeRequest> _requestQueue = new();
+        private bool _isTransitioning = false;
+
+        public string st_Name;
          /// <summary>
          /// 状态机持有者
          /// </summary>
@@ -95,7 +109,7 @@ namespace RSJWYFamework.Runtime
                 _pendingSwitchType = null; // 清空延迟切换标记
                 try
                 {
-                    SwitchNodeImmediate(targetType);
+                    SwitchNode(targetType);
                 }
                 catch (Exception ex)
                 {
@@ -265,6 +279,9 @@ namespace RSJWYFamework.Runtime
         /// <param name="isNextUpadeSwitch">是否在下一帧切换，true为下一帧切换，false为立即切换</param>
         /// <param name="statusCode">状态码</param>
         /// <exception cref="AppException"></exception>
+        /// <summary>
+        /// 切换到指定节点 (Async Queue)
+        /// </summary>
         public void SwitchNode(Type type, bool isNextUpadeSwitch = false, int statusCode = 0)
         {
             if (type == null)
@@ -276,12 +293,8 @@ namespace RSJWYFamework.Runtime
                 return;
             }
             
-            // 设置状态码
-            StatusCode = statusCode;
-                
             if (isNextUpadeSwitch)
             {
-                // 设置延迟切换目标，如果已有延迟切换则覆盖（确保每帧最多一个延迟切换）
                 if (_pendingSwitchType != null)
                 {
                     AppLogger.Warning($"覆盖之前的延迟切换请求：{_pendingSwitchType.Name} -> {type.Name}");
@@ -291,37 +304,114 @@ namespace RSJWYFamework.Runtime
             }
             else
             {
-                // 立即切换
-                SwitchNodeImmediate(type);
+                _requestQueue.Enqueue(new StateChangeRequest {
+                    Type = StateChangeRequest.RequestType.Switch,
+                    TargetNodeType = type,
+                    StatusCode = statusCode
+                });
+                ProcessQueue().Forget();
             }
         }
-        
         /// <summary>
-        /// 立即切换到指定节点（内部方法）
+        /// 处理状态切换请求队列
         /// </summary>
-        /// <param name="type">要切换到的节点类型</param>
-        /// <exception cref="AppException"></exception>
-        private void SwitchNodeImmediate(Type type)
+        private async UniTaskVoid ProcessQueue()
+        {
+            if (_isTransitioning) return;
+            _isTransitioning = true;
+            try
+            {
+                while (_requestQueue.Count > 0)
+                {
+                    var req = _requestQueue.Dequeue();
+                    try
+                    {
+                        switch (req.Type)
+                        {
+                            case StateChangeRequest.RequestType.Switch:
+                                await ExecuteSwitchAsync(req.TargetNodeType, req.StatusCode);
+                                break;
+                            case StateChangeRequest.RequestType.Stop:
+                                await ExecuteStopAsync(req.StatusCode, req.Reason);
+                                break;
+                            case StateChangeRequest.RequestType.Restart:
+                                await ExecuteRestartAsync(req.TargetNodeType, req.Reason, req.StatusCode);
+                                break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Error($"状态机处理请求 {req.Type} 失败: {ex}");
+                    }
+                }
+            }
+            finally { _isTransitioning = false; }
+        }
+
+        private async UniTask ExecuteSwitchAsync(Type type, int statusCode)
         {
             if (!typeof(StateNodeBase).IsAssignableFrom(type))
                 throw new AppException($"切换节点失败：节点 {type.Name} 并非继承自节点基类！");
                 
             if (!Procedures.TryGetValue(type, out var nextProcedure))
-            {
                 throw new AppException($"切换节点失败：不存在节点 {type.Name} 或者节点未激活！");
-            }
             
-            // 如果是同一个节点，直接返回
-            if (_currentProcedureBase == nextProcedure)
-                return;
+            if (_currentProcedureBase == nextProcedure) return;
 
+            StatusCode = statusCode;
             var lastProcedure = _currentProcedureBase;
-            lastProcedure?.OnLeave(nextProcedure, false); // 正常切换，不是重启
+            
+            if (lastProcedure != null)
+                await lastProcedure.OnLeave(nextProcedure, false);
             
             _currentProcedureBase = nextProcedure;
-            nextProcedure.OnEnter(lastProcedure);
+            await nextProcedure.OnEnter(lastProcedure);
 
             ProcedureSwitchEvent?.Invoke(lastProcedure, nextProcedure);
+        }
+
+        private async UniTask ExecuteStopAsync(int statusCode, string reason)
+        {
+             if (IsTerminated) return;
+
+            if (_currentProcedureBase != null)
+            {
+                try 
+                {
+                    await _currentProcedureBase.OnLeave(null, false);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error($"状态机 {st_Name} 停止节点时出错：{ex.Message}");
+                }
+                _currentProcedureBase = null;
+            }
+
+            IsTerminated = true;
+            StatusCode = statusCode;
+            StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode, false);
+        }
+
+        private async UniTask ExecuteRestartAsync(Type startNodeType, string reason, int statusCode)
+        {
+            if (!IsTerminated)
+            {
+                if (_currentProcedureBase != null)
+                {
+                    try { await _currentProcedureBase.OnLeave(null, true); }
+                    catch (Exception ex) { AppLogger.Error($"状态机 {st_Name} 重启停止节点时出错：{ex.Message}"); }
+                    _currentProcedureBase = null;
+                }
+            }
+
+            IsTerminated = false;
+            IsPaused = false;
+            StatusCode = statusCode;
+            _pendingSwitchType = null;
+            StateMachineRestartEvent?.Invoke(this, reason, null, startNodeType, statusCode);
+
+            if (startNodeType != null) StartNode(startNodeType);
+            else StartNode();
         }
         /// <summary>
         /// 切换到下一节点，
@@ -506,29 +596,21 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         /// <param name="reason">停止原因</param>
         /// <param name="statusCode">最终状态码</param>
+        /// <summary>
+        /// 停止状态机 (Async Queue)
+        /// </summary>
+        /// <param name="reason">停止原因</param>
+        /// <param name="statusCode">最终状态码</param>
         public void Stop( int statusCode = 0,string reason = "Stopped")
         {
             if (IsTerminated) return;
-
-            // 停止当前节点
-            if (_currentProcedureBase != null)
-            {
-                try 
-                {
-                    _currentProcedureBase.OnLeave(null, false);
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Error($"状态机 {st_Name} 停止节点时出错：{ex.Message}");
-                }
-                _currentProcedureBase = null;
-            }
-
-            IsTerminated = true;
-            StatusCode = statusCode;
             
-            // 触发结束事件
-            StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode, false);
+            _requestQueue.Enqueue(new StateChangeRequest {
+                Type = StateChangeRequest.RequestType.Stop,
+                StatusCode = statusCode,
+                Reason = reason
+            });
+            ProcessQueue().Forget();
         }
 
         /// <summary>
@@ -537,37 +619,20 @@ namespace RSJWYFamework.Runtime
         public bool IsPaused { get; set; } = false;
 
         /// <summary>
-        /// 重启状态机
+        /// 重启状态机 (Async Queue)
         /// </summary>
         /// <param name="startNodeType">启动节点类型，null则使用默认</param>
         /// <param name="reason">重启原因</param>
         /// <param name="statusCode">状态码</param>
         public void Restart(Type startNodeType = null, string reason = "Restart", int statusCode = 0)
         {
-            // 1. 如果还在运行，先停止
-            if (!IsTerminated)
-            {
-                Stop( statusCode,$"Restarting: {reason}");
-            }
-
-            // 2. 重置标志位
-            IsTerminated = false;
-            IsPaused = false;
-            StatusCode = statusCode;
-            _pendingSwitchType = null;
-
-            // 3. 触发重启事件
-            StateMachineRestartEvent?.Invoke(this, reason, null, startNodeType, statusCode);
-
-            // 4. 重新启动
-            if (startNodeType != null)
-            {
-                StartNode(startNodeType);
-            }
-            else
-            {
-                StartNode();
-            }
+            _requestQueue.Enqueue(new StateChangeRequest {
+                Type = StateChangeRequest.RequestType.Restart,
+                TargetNodeType = startNodeType,
+                StatusCode = statusCode,
+                Reason = reason
+            });
+            ProcessQueue().Forget();
         }
         
         #endregion
@@ -600,7 +665,7 @@ namespace RSJWYFamework.Runtime
         /// 添加节点（类型安全检查）
         /// </summary>
         /// <param name="procedureBase">状态节点</param>
-        public new void AddNode(StateNodeBase procedureBase)
+        public new void AddNode(StateNodeBase procedureBase)    
         {
             // 🔒 安全锁：确保添加的节点类型与状态机的泛型类型 T 一致
             if (!(procedureBase is StateNodeBase<T>))

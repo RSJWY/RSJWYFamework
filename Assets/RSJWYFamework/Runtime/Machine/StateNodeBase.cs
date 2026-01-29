@@ -1,3 +1,6 @@
+using System;
+using Cysharp.Threading.Tasks;
+
 namespace RSJWYFamework.Runtime
 {
     public abstract class StateNodeBase
@@ -20,17 +23,23 @@ namespace RSJWYFamework.Runtime
         public abstract void OnClose();
         
         /// <summary>
-        /// 进入当前流程
+        /// 进入当前流程 (Async)
         /// </summary>
         /// <param name="lastProcedureBase">上一个离开的流程</param>
-        public abstract void OnEnter(StateNodeBase lastProcedureBase);
+        public virtual UniTask OnEnter(StateNodeBase lastProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
 
         /// <summary>
-        /// 离开当前流程
+        /// 离开当前流程 (Async)
         /// </summary>
         /// <param name="nextProcedureBase">下一个进入的流程</param>
         /// <param name="isRestarting">是否为重启操作，默认为false</param>
-        public abstract void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false);
+        public virtual UniTask OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
+        {
+            return UniTask.CompletedTask;
+        }
         #endregion 
         #region 虚方法
         /// <summary>

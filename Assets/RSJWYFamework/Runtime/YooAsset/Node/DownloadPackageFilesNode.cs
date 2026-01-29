@@ -20,10 +20,9 @@ namespace RSJWYFamework.Runtime
             base.OnClose();
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            base.OnEnter(lastProcedureBase);
-            BeginDownload().Forget();
+           await BeginDownload();
         }
         private async UniTask  BeginDownload()
         {
@@ -40,11 +39,8 @@ namespace RSJWYFamework.Runtime
             // 检测下载结果
             if (downloader.Status != EOperationStatus.Succeed)
             {
-                
-                _retryCount++;
-                var maxRetries = Utility.YooAsset.UpdatePackageVersionNumberOfRetries;
 
-                AppLogger.Error($"更新包{packageName}下载失败：{downloader.Error} (重试次数: {_retryCount})");
+                AppLogger.Error($"更新包{packageName}下载失败：{downloader.Error}");
                 _sm.Stop(500,"资源下载失败");
             }
             else
@@ -89,11 +85,6 @@ namespace RSJWYFamework.Runtime
         static int GetBaiFenBi(int now, int sizeBytes)
         {
             return (int)sizeBytes / now * 100;
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-            base.OnLeave(nextProcedureBase, isRestarting);
         }
     }
 }

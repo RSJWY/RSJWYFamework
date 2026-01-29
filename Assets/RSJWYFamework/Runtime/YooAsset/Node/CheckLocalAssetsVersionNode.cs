@@ -19,8 +19,9 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
+            await LocalAssetsVersion();
         }
 
 
@@ -61,8 +62,5 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
     }
 }

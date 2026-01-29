@@ -19,11 +19,15 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log($"加载热更代码数据");
-            UniTask.Create(async () =>
-            {
+            await Task();
+        }
+
+        private async UniTask Task()
+        {
+            
                 var package=ModuleManager.GetModule<YooAssetManager>().GetPackage("RawFilePackage");
                 if (!package.CheckLocationValid("HotUpdateCode_HotList"))
                 {
@@ -103,11 +107,6 @@ namespace RSJWYFamework.Runtime
                 _sm.SetBlackboardValue("HotcodeDic",hotCodeBytesMap);
                 _sm.SetBlackboardValue("MFAOTDic",MFAOTbytesMap);
                 _sm.SwitchNode<LoadHotCodeNode>();
-            });
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
         }
 
         public override void OnUpdate()

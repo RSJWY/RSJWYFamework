@@ -20,12 +20,15 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log($"加载热更代码");
-            UniTask.Create(async () =>
-            {
-                await UniTask.WaitForSeconds(0.5f);
+            await LoadHotCode();
+        }
+
+        async UniTask LoadHotCode()
+        {
+             await UniTask.WaitForSeconds(0.5f);
                 //获取数据
                 var _loadLis = (HotCodeDLL)_sm.GetBlackboardValue("LoadList");
                 var _DllDic = (Dictionary<string, HotCodeBytes>)_sm.GetBlackboardValue("HotcodeDic");
@@ -92,19 +95,7 @@ namespace RSJWYFamework.Runtime
                 _DllDic.Clear();
                 _sm.SetBlackboardValue("HotCodeAssembly",hotCode);
                 _sm.SwitchNode<LoadHotCodeDoneNode>();
-            });
         }
 
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-        }
-
-        public override void OnUpdate()
-        {
-        }
-
-        public override void OnUpdateSecond()
-        {
-        }
     }
 }

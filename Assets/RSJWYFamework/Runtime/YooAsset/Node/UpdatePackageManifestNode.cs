@@ -19,10 +19,9 @@ namespace RSJWYFamework.Runtime
             base.OnClose();
         }
 
-        public  override void OnEnter(StateNodeBase lastProcedureBase)
+        public  override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            base.OnEnter(lastProcedureBase);
-            UpdateManifest().Forget();
+           await UpdateManifest();
         }
         private async UniTask UpdateManifest() 
         {
@@ -37,25 +36,18 @@ namespace RSJWYFamework.Runtime
 
             if (operation.Status != EOperationStatus.Succeed)
             {
-                
-                _retryCount++;
-                var maxRetries = Utility.YooAsset.UpdatePackageVersionNumberOfRetries;
 
-                AppLogger.Error($"更新包{packageName}清单失败！Error：{operation.Error} (重试次数: {_retryCount})");
+                AppLogger.Error($"更新包{packageName}清单失败！Error：{operation.Error} ");
                 
                 _sm.SetBlackboardValue("NetworkNormal", false);
                 //_sm.SwitchNode<UpdatePackageManifestNode>();
-                _sm.Stop(500,$"更新包{packageName}清单文件失败，已达到最大重试次数({maxRetries})，停止重试");
+                _sm.Stop(500,$"更新包{packageName}清单文件失败");
             }
             else
             {
                 AppLogger.Log($"更新包{packageName}清单成功");
                 _sm.SwitchNode<CreatePackageDownloaderNode>();
             }
-        }
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
-            base.OnLeave(nextProcedureBase, isRestarting);
         }
 
     }

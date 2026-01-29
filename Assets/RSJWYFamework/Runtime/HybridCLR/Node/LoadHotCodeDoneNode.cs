@@ -1,4 +1,6 @@
 
+using Cysharp.Threading.Tasks;
+
 namespace RSJWYFamework.Runtime
 {
     /// <summary>
@@ -15,13 +17,9 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override void OnEnter(StateNodeBase lastProcedureBase)
+        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log($"加载热更代码流程结束");
-        }
-
-        public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
-        {
         }
 
         public override void OnUpdate()
