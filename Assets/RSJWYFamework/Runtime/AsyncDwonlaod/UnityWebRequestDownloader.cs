@@ -197,10 +197,6 @@ namespace RSJWYFamework.Runtime
                 Error = "下载被用户取消";
             }
         }
-        internal override void InternalWaitForAsyncComplete()
-        {
-            throw new AppException("UnityWebRequestDownloader 不支持同步等待完成，因为它是异步操作。");
-        }
 
         /// <summary>
         /// 获取操作描述

@@ -17,10 +17,6 @@ namespace RSJWYFamework.Runtime
         {
             OnAbort();
         }
-        internal override void InternalWaitForAsyncComplete()
-        {
-            OnWaitForAsyncComplete();
-        }
         internal override void InternalSecondUpdate()
         {
             OnSecondUpdate();
@@ -58,10 +54,6 @@ namespace RSJWYFamework.Runtime
 
 
 
-        /// <summary>
-        /// 同步等待异步等待完成
-        /// </summary>
-        protected abstract void OnWaitForAsyncComplete();
 
         /// <summary>
         /// 异步操作系统是否繁忙

@@ -40,11 +40,6 @@ namespace RSJWYFamework.Runtime
         {
             _stateMachine.Stop();
         }
-        internal override void InternalWaitForAsyncComplete()
-        {
-            throw new AppException("状态机仅支持异步等待！禁止同步等待！");
-        }
-        
         public AppStateMachineAsyncOperation (StateMachine stateMachine,Type  startStateType)
         {
             _stateMachine = stateMachine;

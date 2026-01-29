@@ -110,8 +110,5 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        protected override void OnWaitForAsyncComplete()
-        {
-        }
     }
 }

@@ -178,9 +178,6 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        protected override void OnWaitForAsyncComplete()
-        {
-        }
 
         #region Websocket
 

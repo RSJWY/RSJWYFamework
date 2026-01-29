@@ -21,23 +21,11 @@ namespace RSJWYFamework.Runtime
         /// 异步操作名称
         /// </summary>
         private string _asyncOperationName = null;
-        /// <summary>
-        /// 等待异步执行完成的帧数
-        /// </summary>
-        private int _whileFrame = 1000;
 
         /// <summary>
         /// 所有子任务
         /// </summary>
         internal readonly List<AppAsyncOperationBase> Childs = new List<AppAsyncOperationBase>(10);
-
-        /// <summary>
-        /// 同步方法正在等待异步执行完成
-        /// <remarks>
-        /// 这个作为标志使用，继承的实现判断这个来判断外部是不是在同步等待异步执行完成
-        /// </remarks>
-        /// </summary>
-        internal bool IsWaitForAsyncComplete { private set; get; } = false;
 
         /// <summary>
         /// 是否已经执行结束
@@ -148,18 +136,10 @@ namespace RSJWYFamework.Runtime
         /// 这是在同步方法中等待异步操作完成
         /// </remarks>
         /// </summary>
-        internal virtual void InternalWaitForAsyncComplete()
+        /*internal virtual void InternalWaitForAsyncComplete()
         {
-            /*while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }*/
             throw new System.NotImplementedException($"异步操作未实现：{_asyncOperationName}--{this.GetType().Name}");
-        }
+        }*/
         /// <summary>
         /// 获取异步操作说明
         /// <remarks>
@@ -175,6 +155,7 @@ namespace RSJWYFamework.Runtime
         internal void InternalException(Exception ex)
         {
             _utcs.TrySetException(ex);
+            _ctr.Dispose();
         }
         
         /// <summary>
@@ -235,11 +216,6 @@ namespace RSJWYFamework.Runtime
 
                 // 更新任务
                 InternalUpdate();
-                // 更新子任务
-                foreach (var child in Childs)
-                {
-                    child.InternalUpdate();
-                }
             }
 
             if (IsDone && IsFinish == false)
@@ -258,6 +234,7 @@ namespace RSJWYFamework.Runtime
                 //设置异步任务完成
                 if (_utcs != null)
                     _utcs.TrySetResult();
+                _ctr.Dispose();
             }
         }
         /// <summary>
@@ -268,12 +245,7 @@ namespace RSJWYFamework.Runtime
             if (IsDone == false)
             {
                 // 更新任务
-                InternalUpdate();
-                // 更新子任务
-                foreach (var child in Childs)
-                {
-                    child.InternalUpdate();
-                }
+                InternalSecondUpdate();
             }
             if (IsDone && IsFinish == false)
             {
@@ -288,6 +260,7 @@ namespace RSJWYFamework.Runtime
                 //设置异步任务完成
                 if (_utcs != null)
                     _utcs.TrySetResult();
+                _ctr.Dispose();
             }
         }
         /// <summary>
@@ -299,11 +272,6 @@ namespace RSJWYFamework.Runtime
             {
                 // 更新任务
                 InternalSecondUnScaleTimeUpdate();
-                // 更新子任务
-                foreach (var child in Childs)
-                {
-                    child.InternalSecondUnScaleTimeUpdate();
-                }
             }
             if (IsDone && IsFinish == false)
             {
@@ -318,6 +286,7 @@ namespace RSJWYFamework.Runtime
                 //设置异步任务完成
                 if (_utcs != null)
                     _utcs.TrySetResult();
+                _ctr.Dispose();
             }
         }
         
@@ -341,6 +310,7 @@ namespace RSJWYFamework.Runtime
                 InternalAbort();
                 //设置异步被取消
                 _utcs.TrySetCanceled(cancellationToken);
+                _ctr.Dispose();
             }
         }
 
@@ -351,7 +321,7 @@ namespace RSJWYFamework.Runtime
         /// 模拟Update调用
         /// </remarks>
         /// </summary>
-        protected bool ExecuteWhileDone()
+        /*protected bool ExecuteWhileDone()
         {
             if (IsDone == false)
             {
@@ -369,7 +339,7 @@ namespace RSJWYFamework.Runtime
                 }
             }
             return IsDone;
-        }
+        }*/
         /// <summary>
         /// 清理
         /// </summary>
@@ -384,7 +354,7 @@ namespace RSJWYFamework.Runtime
         /// 这个函数是把异步操作转委托同步执行（也就是同步等待异步操作完成）
         /// </remarks>
         /// </summary>
-        public void WaitForAsyncComplete()
+        /*public void WaitForAsyncComplete()
         {
             if (IsDone)
                 return;
@@ -402,7 +372,7 @@ namespace RSJWYFamework.Runtime
                 //调用继承的函数实现，一般内部也是while循环检查ExecuteWhileDone
                 InternalWaitForAsyncComplete();
             }
-        }
+        }*/
         
 
         #region 调试信息
@@ -464,6 +434,7 @@ namespace RSJWYFamework.Runtime
         /// 外部请求取消令牌
         /// </summary>
         CancellationToken cancellationToken;
+        private CancellationTokenRegistration _ctr;
         /// <summary>
         /// 异步操作任务源
         /// </summary>
@@ -474,20 +445,31 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public UniTask ToUniTask(CancellationToken cancellationToken = default)
         {
-            //TODO 避免忘记将本异步放入异步系统中执行生命周期，本段代码是否合理，仍需研究
             if (Status == AppAsyncOperationStatus.None)
             {
                 StartOperation();
             }
-            if (_utcs == null)
+
+            if (_utcs != null)
             {
-                _utcs = new UniTaskCompletionSource();
-                if (IsDone)
-                    _utcs.TrySetResult();
+                // 重入保护：如果已经创建了 Task，直接返回
+                // 忽略新的 CancellationToken，因为无法替换已注册的回调
+                if (cancellationToken != this.cancellationToken && cancellationToken != default)
+                {
+                    AppLogger.Warning($"AsyncOperation {this.GetType().Name} ToUniTask called twice with different CancellationToken. The second token will be ignored.");
+                }
+                return _utcs.Task;
             }
+
+            _utcs = new UniTaskCompletionSource();
+            if (IsDone)
+                _utcs.TrySetResult();
+
             this.cancellationToken = cancellationToken;
-            // 注册取消回调
-            cancellationToken.Register(AbortOperation);
+            if (cancellationToken.CanBeCanceled)
+            {
+                _ctr = cancellationToken.Register(AbortOperation);
+            }
             return _utcs.Task;
         }  
         #endregion

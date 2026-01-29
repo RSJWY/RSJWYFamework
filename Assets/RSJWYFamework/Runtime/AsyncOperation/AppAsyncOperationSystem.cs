@@ -54,6 +54,8 @@ namespace RSJWYFamework.Runtime
         {
             get
             {
+                if (_watch == null)
+                    return false;
                 return _watch.ElapsedMilliseconds - _frameTime >= MaxTimeSlice;
             }
         }
@@ -85,6 +87,15 @@ namespace RSJWYFamework.Runtime
                 {
                     _operations.RemoveAt(i);
                     operation.ClearCompletedCallback();
+                    try
+                    {
+                        if (_finishCallback != null)
+                            _finishCallback.Invoke(operation.AsyncOperationName, operation);
+                    }
+                    catch (Exception ex)
+                    {
+                        UnityEngine.Debug.LogException(ex);
+                    }
                 }
             }
 
@@ -122,7 +133,15 @@ namespace RSJWYFamework.Runtime
                 if (operation.IsFinish)
                     continue;
 
-                operation.UpdateOperation();
+                try
+                {
+                    operation.UpdateOperation();
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogException(ex);
+                    operation.InternalException(ex);
+                }
             }
         }
 
@@ -136,11 +155,23 @@ namespace RSJWYFamework.Runtime
             _frameTime = _watch.ElapsedMilliseconds;
             for (int i = 0; i < _operations.Count; i++)
             {
+                // 检查处理器是否繁忙，繁忙则跳过本次Update
+                if (checkBusy && IsBusy)
+                    break;
+
                 var operation = _operations[i];
                 if (operation.IsFinish)
                     continue;
 
-                operation.SecondUpdate();
+                try
+                {
+                    operation.SecondUpdate();
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogException(ex);
+                    operation.InternalException(ex);
+                }
             }
         }
 
@@ -154,11 +185,23 @@ namespace RSJWYFamework.Runtime
             _frameTime = _watch.ElapsedMilliseconds;
             for (int i = 0; i < _operations.Count; i++)
             {
+                // 检查处理器是否繁忙，繁忙则跳过本次Update
+                if (checkBusy && IsBusy)
+                    break;
+
                 var operation = _operations[i];
                 if (operation.IsFinish)
                     continue;
 
-                operation.SecondUnScaleTimeUpdate();
+                try
+                {
+                    operation.SecondUnScaleTimeUpdate();
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogException(ex);
+                    operation.InternalException(ex);
+                }
             }
         }
 
@@ -167,6 +210,16 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         public static void DestroyAll()
         {
+            // 必须先 Abort 所有任务，触发 await 处的 OperationCanceledException，防止逻辑永久挂起
+            foreach (var op in _operations)
+            {
+                op.AbortOperation();
+            }
+            foreach (var op in _newList)
+            {
+                op.AbortOperation();
+            }
+
             _operations.Clear();
             _newList.Clear();
             _startCallback = null;
@@ -222,7 +275,25 @@ namespace RSJWYFamework.Runtime
         {
             _newList.Add(operation);
             operation.SetAsyncOperationName(asyncOperationName);
-            operation.StartOperation();
+            try
+            {
+                operation.StartOperation();
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogException(ex);
+                operation.InternalException(ex);
+            }
+
+            try
+            {
+                if (_startCallback != null)
+                    _startCallback.Invoke(asyncOperationName, operation);
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogException(ex);
+            }
         }
 
         public override void Shutdown()
