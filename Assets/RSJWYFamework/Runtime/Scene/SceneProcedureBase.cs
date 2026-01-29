@@ -219,7 +219,7 @@ namespace RSJWYFamework.Runtime
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log("流程结束");
-            StopStateMachine("场景切换完成");
+            _sm.Stop(0,"场景切换完成");
         }
 
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)

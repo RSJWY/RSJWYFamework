@@ -1,0 +1,193 @@
+# 🤖 RSJWYFramework FSM (2025 Refactored) 使用指南
+
+> **“强类型，零冗余，像手术刀一样精准。”** —— 小码酱
+
+本文档详细说明了 2025 版状态机的使用方法。新版引入了泛型设计，彻底解决了旧版需要频繁强制类型转换（Casting）的痛点，并大幅精简了 API。
+
+---
+
+## 🌟 核心概念 (Core Concepts)
+
+1.  **Owner (持有者)**: 状态机的主人（例如 `PlayerController`, `EnemyBoss`）。
+2.  **StateMachine\<T>**: 泛型状态机，`T` 是持有者的类型。
+3.  **StateNodeBase\<T>**: 泛型状态节点，`T` 是持有者的类型。能直接访问 `Owner`。
+
+---
+
+## 🚀 快速上手 (Quick Start)
+
+假设我们要为一个 **玩家 (PlayerController)** 制作状态机。
+
+### 1. 定义持有者 (The Owner)
+
+这是你的游戏对象脚本。
+
+```csharp
+// PlayerController.cs
+using RSJWYFamework.Runtime;
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    // 1. 声明泛型状态机，指定 Owner 类型为 PlayerController
+    private StateMachine<PlayerController> _fsm;
+
+    // 玩家属性
+    public float MoveSpeed = 5f;
+    public Animator Anim;
+
+    void Start()
+    {
+        // 2. 初始化状态机，把自己 (this) 传进去
+        _fsm = new StateMachine<PlayerController>(this, "PlayerFSM");
+
+        // 3. 添加状态 (泛型版本)
+        _fsm.AddNode<PlayerIdleState>();
+        _fsm.AddNode<PlayerRunState>();
+
+        // 4. 启动状态机
+        _fsm.StartNode<PlayerIdleState>();
+        
+        // 可选：交给 Manager 管理生命周期 (如果你不想自己调 Update)
+        // Module.Get<StateMachineManager>().AddStateMachine(_fsm);
+    }
+
+    void Update()
+    {
+        // 5. 如果没交给 Manager，记得自己驱动更新
+        _fsm.OnUpdate();
+    }
+}
+```
+
+### 2. 定义状态 (The State)
+
+继承 `StateNodeBase<T>`，其中 `T` 必须与 `StateMachine<T>` 的类型一致。
+
+```csharp
+// PlayerStates.cs
+using RSJWYFamework.Runtime;
+using UnityEngine;
+
+// 定义基类是个好习惯，方便管理通用逻辑
+public abstract class PlayerStateBase : StateNodeBase<PlayerController> 
+{
+    // 这里可以写一些玩家特有的辅助方法
+}
+
+// 具体的 Idle 状态
+public class PlayerIdleState : PlayerStateBase
+{
+    public override void OnInit() { }
+
+    public override void OnEnter(StateNodeBase lastProcedureBase)
+    {
+        // ✨ 亮点：直接访问 Owner，不需要 (PlayerController) 强转！
+        Owner.Anim.Play("Idle");
+    }
+
+    public override void OnUpdate()
+    {
+        // 检测输入
+        if (Input.GetAxis("Horizontal") != 0)
+        {
+            // ✨ 亮点：直接访问 Machine 切换状态
+            Machine.SwitchNode<PlayerRunState>();
+        }
+    }
+
+    public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false) { }
+    public override void OnClose() { }
+}
+
+// 具体的 Run 状态
+public class PlayerRunState : PlayerStateBase
+{
+    public override void OnInit() { }
+
+    public override void OnEnter(StateNodeBase lastProcedureBase)
+    {
+        Owner.Anim.Play("Run");
+    }
+
+    public override void OnUpdate()
+    {
+        float move = Input.GetAxis("Horizontal");
+        
+        // 直接使用 Owner 的属性
+        Owner.transform.Translate(Vector3.right * move * Owner.MoveSpeed * Time.deltaTime);
+
+        if (Mathf.Abs(move) < 0.01f)
+        {
+            Machine.SwitchNode<PlayerIdleState>();
+        }
+    }
+    
+    public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false) { }
+    public override void OnClose() { }
+}
+```
+
+---
+
+## � API 参考 (API Reference)
+
+以下是状态机系统最常用的核心 API。
+
+### StateMachine\<T> (控制核心)
+
+| 方法 / 属性 | 说明 |
+| :--- | :--- |
+| **`StartNode<T>()`** | 启动状态机，并立即进入指定的状态 `T`。 |
+| **`SwitchNode<T>()`** | 切换到状态 `T`。支持立即切换或下一帧切换。 |
+| **`Stop(reason, code)`** | **[New]** 停止状态机。支持传递原因字符串和状态码。 |
+| **`Restart(Type, reason)`** | **[New]** 重启状态机。支持传递启动节点类型、重启原因和状态码。 |
+| **`IsPaused`** | **[New]** 布尔属性。设为 `true` 暂停 Update，设为 `false` 恢复。 |
+| **`IsTerminated`** | 属性。返回状态机是否已完全停止（Stop 后为 true）。 |
+| **`Owner`** | 获取状态机的持有者。**泛型版返回 `T` 类型**，无需强转。 |
+| **`SetBlackboardValue(k, v)`** | 设置黑板数据（跨状态共享数据）。 |
+| **`GetBlackboardValue<V>(k)`** | 获取黑板数据，自动转换为类型 `V`。 |
+
+### StateNodeBase\<T> (状态逻辑)
+
+| 方法 / 属性 | 调用时机 | 说明 |
+| :--- | :--- | :--- |
+| **`OnInit()`** | 1次 | 状态被 `AddNode` 时调用。用于初始化缓存引用。 |
+| **`OnEnter(last)`** | 每次进入 | 进入该状态时调用。`last` 是上一个状态的实例。 |
+| **`OnUpdate()`** | 每帧 | 状态机的 `OnUpdate` 被调用时执行。核心逻辑处。 |
+| **`OnLeave(next)`** | 每次离开 | 离开该状态时调用。`next` 是即将进入的状态实例。 |
+| **`OnClose()`** | 1次 | 状态机销毁或移除该节点时调用。用于清理资源。 |
+| **`Owner`** | - | **[New]** 直接访问持有者对象 (T 类型)。 |
+| **`Machine`** | - | **[New]** 直接访问所属状态机 (StateMachine\<T> 类型)。 |
+
+---
+
+## ��️ API 变更对照表 (Migration Guide)
+
+如果你是从旧版本迁移过来的，请注意以下变化：
+
+| 功能 | 旧版写法 (Deprecated) ❌ | 新版写法 (Recommended) ✅ |
+| :--- | :--- | :--- |
+| **访问 Owner** | `((Player)Owner).Speed` (需要强转) | `Owner.Speed` (直接访问) |
+| **切换状态** | `SwitchToNode<IdleState>()` (基类代理) | `Machine.SwitchNode<IdleState>()` |
+| **获取黑板值** | `GetBlackboardValue("Key")` | `Machine.GetBlackboardValue("Key")` |
+| **终止状态机** | `TerminateStateMachine()` | `Machine.Stop()` |
+| **获取状态机** | `_sm` (类型是 StateMachine) | `Machine` (类型是 StateMachine\<T>) |
+
+---
+
+## ❓ 常见问题 (FAQ)
+
+**Q: 我必须使用泛型吗？**
+A: 不强制，但强烈建议。如果你坚持使用 `StateNodeBase` (非泛型)，你将失去 `Owner` 和 `Machine` 的强类型访问权，必须手动转换类型，且无法使用新版移除的便捷方法。
+
+**Q: StateMachineManager 还能用吗？**
+A: 可以。`StateMachine<T>` 继承自 `StateMachine`，所以 Manager 依然可以管理它的生命周期（Update, Cleanup 等）。
+
+**Q: 为什么移除了 StateNodeBase 里的 SwitchToNode？**
+A: 为了减少代码耦合和“中间人坏味”。让节点明确知道它是通过 `Machine` 来进行操作的，逻辑路径更清晰。
+
+---
+
+_Generated by Little Code Sauce (小码酱) for Master._
+_2025-01-29_

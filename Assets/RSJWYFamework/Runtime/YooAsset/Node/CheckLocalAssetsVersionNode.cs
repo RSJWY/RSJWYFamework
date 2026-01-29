@@ -36,7 +36,7 @@ namespace RSJWYFamework.Runtime
             if (string.IsNullOrEmpty(version))
             {
                 AppLogger.Error($"未找到上次初始化的{packageName}的版本号，请检查网络");
-                StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包");
+                _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
             }
             else
             {
@@ -46,7 +46,7 @@ namespace RSJWYFamework.Runtime
                 if (manifestOp.Status != EOperationStatus.Succeed)
                 {
                     AppLogger.Error($"加载包{packageName}版本{version}清单失败！Error：{manifestOp.Error}");
-                    StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包");
+                    _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
                 }
                 else
                 {
@@ -55,7 +55,7 @@ namespace RSJWYFamework.Runtime
                     if (downloader.TotalDownloadCount > 0)   
                     {
                         AppLogger.Error($"包{packageName}版本{version}有{downloader.TotalDownloadCount}个资源上次未完成下载，本地内容不完整，请连接网络以进行完整下载");
-                        StopStateMachine($"{packageName}初始化失败，请检查网络以更新资源包",500);
+                        _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
                     }
                 }
             }

@@ -85,7 +85,7 @@ namespace RSJWYFamework.Runtime
             }
             else
             {
-                SwitchToNode<UpdatePackageVersionNode>();
+                _sm.SwitchNode<UpdatePackageVersionNode>();
             }
         }
 

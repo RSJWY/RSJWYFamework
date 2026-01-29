@@ -18,9 +18,9 @@ namespace RSJWYFamework.Runtime
 
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
-            var packageName = (string)GetBlackboardValue("PackageName");
+            var packageName = (string)_sm.GetBlackboardValue("PackageName");
             AppLogger.Log($"完成包{packageName}更新流程");
-            TerminateStateMachine($"完成包{packageName}更新流程");
+            _sm.Stop(0,$"完成包{packageName}更新流程");
         }
 
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)

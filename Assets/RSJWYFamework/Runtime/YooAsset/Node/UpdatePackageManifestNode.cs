@@ -43,30 +43,14 @@ namespace RSJWYFamework.Runtime
 
                 AppLogger.Error($"更新包{packageName}清单失败！Error：{operation.Error} (重试次数: {_retryCount})");
                 
-                // 检查是否需要重试
-                if (ShouldRetry(maxRetries))
-                {
-                    
-                    AppLogger.Warning($"将在1秒后重试更新包{packageName}清单文件 (剩余重试次数: {GetRemainingRetries(maxRetries)})");
-                    await UniTask.WaitForSeconds(1.0f);
-                    
-                    // 使用状态机重启功能重新执行当前节点
-                    RestartStateMachine<UpdatePackageManifestNode>($"重试更新包清单文件，第{_retryCount}次重试",400);
-                    return;
-                }
-                else
-                {
-                    SetBlackboardValue("NetworkNormal", false);
-                    //_sm.SwitchNode<UpdatePackageManifestNode>();
-                    StopStateMachine($"更新包{packageName}清单文件失败，已达到最大重试次数({maxRetries})，停止重试",500);
-                    // 重试次数用完，设置网络异常状态
-                    AppLogger.Error($"更新包{packageName}清单文件失败，已达到最大重试次数({maxRetries})，停止重试");
-                }
+                _sm.SetBlackboardValue("NetworkNormal", false);
+                //_sm.SwitchNode<UpdatePackageManifestNode>();
+                _sm.Stop(500,$"更新包{packageName}清单文件失败，已达到最大重试次数({maxRetries})，停止重试");
             }
             else
             {
                 AppLogger.Log($"更新包{packageName}清单成功");
-                SwitchToNode<CreatePackageDownloaderNode>();
+                _sm.SwitchNode<CreatePackageDownloaderNode>();
             }
         }
         public override void OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)

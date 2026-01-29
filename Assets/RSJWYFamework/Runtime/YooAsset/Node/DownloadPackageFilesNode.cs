@@ -27,8 +27,8 @@ namespace RSJWYFamework.Runtime
         }
         private async UniTask  BeginDownload()
         {
-            packageName=(string)GetBlackboardValue("PackageName");
-            var downloader = (ResourceDownloaderOperation)GetBlackboardValue("Downloader");
+            packageName=(string)_sm.GetBlackboardValue("PackageName");
+            var downloader = (ResourceDownloaderOperation)_sm.GetBlackboardValue("Downloader");
             downloader.DownloadErrorCallback = OnDownloadErrorFunction;
             downloader.DownloadUpdateCallback = OnDownloadProgressUpdateFunction;
             downloader.DownloadFinishCallback = OnDownloadOverFunction;
@@ -45,30 +45,12 @@ namespace RSJWYFamework.Runtime
                 var maxRetries = Utility.YooAsset.UpdatePackageVersionNumberOfRetries;
 
                 AppLogger.Error($"更新包{packageName}下载失败：{downloader.Error} (重试次数: {_retryCount})");
-                // 检查是否需要重试
-                if (ShouldRetry(maxRetries))
-                {
-                    
-                    AppLogger.Warning($"将在1秒后重试更新包{packageName}下载文件 (剩余重试次数: {GetRemainingRetries(maxRetries)})");
-                    await UniTask.WaitForSeconds(1.0f);
-                    
-                    // 使用状态机重启功能重新执行当前节点
-                    RestartStateMachine<DownloadPackageFilesNode>($"重试更新包{packageName}下载文件，第{_retryCount}次重试",400);
-                    return;
-                }
-                else
-                {
-                    SetBlackboardValue("NetworkNormal", false);
-                    //_sm.SwitchNode<UpdatePackageManifestNode>();
-                    StopStateMachine($"更新包{packageName}下载文件失败，已达到最大重试次数({maxRetries})，停止重试",500);
-                    // 重试次数用完，设置网络异常状态
-                    AppLogger.Error($"更新包{packageName}下载文件失败，已达到最大重试次数({maxRetries})，停止重试");
-                }
+                _sm.Stop(500,"资源下载失败");
             }
             else
             {
                 AppLogger.Log($"包{packageName}下载新资源完成");
-                SwitchToNode<DownloadPackageOverNode>();
+                _sm.SwitchNode<DownloadPackageOverNode>();
             }
         }
         

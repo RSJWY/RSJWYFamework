@@ -77,6 +77,8 @@ public class ComfyUITaskTest : MonoBehaviour
     [SerializeField] private bool autoStartTest = false;
     
     private ComfyUITaskAsyncOperation currentTask;
+    public Texture2D lastResultTexture;
+    private ProgressData lastProgress;
 
     void Start()
     {
@@ -97,6 +99,8 @@ public class ComfyUITaskTest : MonoBehaviour
 
         Debug.Log("开始ComfyUI任务测试...");
         
+        lastProgress = null; // 重置进度
+
         // 创建ComfyUI任务
         currentTask = new ComfyUITaskAsyncOperation(
             clientId,
@@ -109,12 +113,21 @@ public class ComfyUITaskTest : MonoBehaviour
         // 监听任务完成事件
         currentTask.Completed += OnTaskCompleted;
         
+        // 监听进度事件
+        currentTask.OnProgress += OnTaskProgress;
+        
         // 启动任务
         currentTask.StartAddAppAsyncOperationSystem($"ComfyUITestTask_{clientId}");
         
         Debug.Log($"任务已启动，客户端ID: {clientId}");
         Debug.Log($"服务器地址: {serverAddress}");
         Debug.Log($"使用WebSocket: {useWSS}");
+    }
+
+    private void OnTaskProgress(ProgressData progress)
+    {
+        lastProgress = progress;
+        Debug.Log($"任务进度: {progress.Value}/{progress.Max} (Node: {progress.Node})");
     }
 
     [ContextMenu("停止当前任务")]
@@ -139,7 +152,7 @@ public class ComfyUITaskTest : MonoBehaviour
             
             // 这里是一个简化的解析逻辑
             // 实际的ComfyUI响应结构可能不同，需要根据实际情况调整
-            var ImageInfo = historyResponse[prompt_id]["outputs"]["57"]["images"][0];
+            var ImageInfo = historyResponse[prompt_id]["outputs"]["9"]["images"][0];
             var imageURL = GetHistoryImageURLResult.GetFullImageURL(ImageInfo["filename"].ToString(),ImageInfo["type"].ToString());
             
             return new GetHistoryImageURLResult
@@ -184,7 +197,7 @@ public class ComfyUITaskTest : MonoBehaviour
             // 显示下载的图片
             if (task.DownloadedTexture != null)
             {
-                GUILayout.Box(task.DownloadedTexture);
+                lastResultTexture = task.DownloadedTexture;
             }
         }
         
@@ -202,7 +215,7 @@ public class ComfyUITaskTest : MonoBehaviour
 
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(10, 10, 400, 200));
+        GUILayout.BeginArea(new Rect(10, 10, 400, Screen.height - 20));
         
         GUILayout.Label("ComfyUI任务测试");
         
@@ -221,12 +234,34 @@ public class ComfyUITaskTest : MonoBehaviour
             {
                 StopCurrentTask();
             }
+            
+            if (lastProgress != null)
+            {
+                GUILayout.Space(5);
+                GUILayout.Label($"进度: {lastProgress.Value}/{lastProgress.Max}");
+                GUILayout.Label($"当前节点: {lastProgress.Node}");
+                
+                // 绘制进度条
+                float progress = (float)lastProgress.Value / lastProgress.Max;
+                GUILayout.HorizontalSlider(progress, 0f, 1f);
+            }
         }
         
         GUILayout.Space(10);
         GUILayout.Label($"服务器: {serverAddress}");
         GUILayout.Label($"客户端ID: {clientId}");
         
+        if (lastResultTexture != null)
+        {
+            GUILayout.Space(10);
+            GUILayout.Label("生成结果:");
+            // 限制图片显示大小，避免过大撑爆屏幕
+            float aspect = (float)lastResultTexture.width / lastResultTexture.height;
+            float width = Mathf.Min(400, lastResultTexture.width);
+            float height = width / aspect;
+            GUILayout.Box(lastResultTexture, GUILayout.Width(width), GUILayout.Height(height));
+        }
+
         GUILayout.EndArea();
     }
 }

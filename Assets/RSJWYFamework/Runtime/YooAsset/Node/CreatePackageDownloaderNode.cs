@@ -24,22 +24,22 @@ namespace RSJWYFamework.Runtime
 
         public override void OnEnter(StateNodeBase lastProcedureBase)
         {
-            var packageName = (string)GetBlackboardValue("PackageName");
+            var packageName = (string)_sm.GetBlackboardValue("PackageName");
             var package = YooAssets.GetPackage(packageName);
             var downloader = package.CreateResourceDownloader(Utility.YooAsset.DownloadingMaxNum, Utility.YooAsset.FailedTryAgainNum);
-            SetBlackboardValue("Downloader", downloader);
+            _sm. SetBlackboardValue("Downloader", downloader);
 
             if (downloader.TotalDownloadCount == 0)
             {
                 AppLogger.Log($"包{packageName}没找到任何需要下载的资源！");
-                SwitchToNode<UpdaterDoneNode>();
+                _sm.SwitchNode<UpdaterDoneNode>();
             }
             else
             {
                 // 发现新更新文件后，挂起流程系统
                 // 注意：开发者需要在下载前检测磁盘空间不足
                 AppLogger.Log($"包{packageName}发现新文件！下载的文件总量：{downloader.TotalDownloadCount}，总大小：{downloader.TotalDownloadBytes}");
-                SwitchToNode<DownloadPackageFilesNode>();
+                _sm.SwitchNode<DownloadPackageFilesNode>();
             }
         }
 

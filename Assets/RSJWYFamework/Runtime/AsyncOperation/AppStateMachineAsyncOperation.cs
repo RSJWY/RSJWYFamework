@@ -38,7 +38,7 @@ namespace RSJWYFamework.Runtime
 
         internal override void InternalAbort()
         {
-            _stateMachine.Stop("异步操作请求终止",500);
+            _stateMachine.Stop();
         }
         internal override void InternalWaitForAsyncComplete()
         {

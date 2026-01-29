@@ -28,46 +28,6 @@ namespace RSJWYFamework.Runtime
         public bool IsTerminated { get; private set; } = false;
         
         /// <summary>
-        /// 状态机结束时间戳
-        /// </summary>
-        public long TerminatedTime { get; private set; } = 0;
-        
-        /// <summary>
-        /// 状态机结束原因
-        /// </summary>
-        public string TerminationReason { get; private set; } = string.Empty;
-        
-        /// <summary>
-        /// 状态机重启次数
-        /// </summary>
-        public int RestartCount { get; private set; } = 0;
-        
-        /// <summary>
-        /// 最后一次重启时间戳
-        /// </summary>
-        public long LastRestartTime { get; private set; } = 0;
-        
-        /// <summary>
-        /// 最后一次重启原因
-        /// </summary>
-        public string LastRestartReason { get; private set; } = string.Empty;
-        
-        /// <summary>
-        /// 状态机是否已停止（暂停状态，不同于终止）
-        /// </summary>
-        public bool IsStopped { get; private set; } = false;
-        
-        /// <summary>
-        /// 状态机停止时间戳
-        /// </summary>
-        public long StoppedTime { get; private set; } = 0;
-        
-        /// <summary>
-        /// 状态机停止原因
-        /// </summary>
-        public string StopReason { get; private set; } = string.Empty;
-        
-        /// <summary>
         /// 当前状态码（用户自定义状态标识）
         /// </summary>
         public int StatusCode { get; private set; } = 0;
@@ -115,7 +75,7 @@ namespace RSJWYFamework.Runtime
         public void OnUpdate()
         {
             // 如果状态机已终止或已停止，则不执行更新
-            if (IsTerminated || IsStopped)
+            if (IsTerminated || IsPaused)
                 return;
                 
             // 处理延迟切换（每帧最多处理一个）
@@ -150,7 +110,7 @@ namespace RSJWYFamework.Runtime
         public void OnUpdateSecond()
         {
             // 如果状态机已终止或已停止，则不执行更新
-            if (IsTerminated || IsStopped)
+            if (IsTerminated || IsPaused)
                 return;
                 
             _currentProcedureBase?.OnUpdateSecond();
@@ -163,7 +123,7 @@ namespace RSJWYFamework.Runtime
         public void OnUpdateSecondUnScaleTime()
         {
             // 如果状态机已终止或已停止，则不执行更新
-            if (IsTerminated || IsStopped)
+            if (IsTerminated || IsPaused)
                 return;
                 
             _currentProcedureBase?.OnUpdateSecond();
@@ -539,273 +499,129 @@ namespace RSJWYFamework.Runtime
 
         #endregion
         
-        #region 状态机结束管理
-        
+        #region 状态机生命周期管理 (Simplified)
+
         /// <summary>
-        /// 自动终止状态机（通常在最终节点中调用）
+        /// 停止状态机（清空当前状态，重置标志位）
         /// </summary>
-        /// <param name="reason">终止原因</param>
-        /// <param name="statusCode">状态码</param>
-        public void AutoTerminate(string reason = "流程完成", int statusCode = 0)
+        /// <param name="reason">停止原因</param>
+        /// <param name="statusCode">最终状态码</param>
+        public void Stop( int statusCode = 0,string reason = "Stopped")
         {
-            if (IsTerminated)
+            if (IsTerminated) return;
+
+            // 停止当前节点
+            if (_currentProcedureBase != null)
             {
-                AppLogger.Warning($"状态机 {st_Name} 已经结束，无法自动终止");
-                return;
-            }
-            
-            AppLogger.Log($"状态机 {st_Name} 自动终止，原因：{reason}，状态码：{statusCode}");
-            Terminate(reason, false, statusCode);
-        }
-        
-        /// <summary>
-        /// 终止状态机
-        /// </summary>
-        /// <param name="reason">结束原因</param>
-        /// <param name="isRestarting">是否为重启操作</param>
-        /// <param name="statusCode">状态码</param>
-        public void Terminate(string reason = "手动终止", bool isRestarting = false, int statusCode = 0)
-        {
-            if (IsTerminated)
-            {
-                AppLogger.Warning($"状态机 {st_Name} 已经结束，无法重复终止");
-                return;
-            }
-            
-            try
-            {
-                // 设置状态码
-                StatusCode = statusCode;
-                
-                // 停止当前节点
-                if (_currentProcedureBase != null)
+                try 
                 {
-                    _currentProcedureBase.OnLeave(null, isRestarting); // 根据isRestarting参数决定是否为重启
-                    AppLogger.Log($"状态机 {st_Name} 终止时停止了当前节点：{_currentProcedureBase.GetType().Name}");
-                }
-                
-                // 设置结束状态
-                IsTerminated = true;
-                TerminatedTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                TerminationReason = reason ?? "未知原因";
-                _currentProcedureBase = null;
-                _pendingSwitchType = null;
-               
-                // 触发结束事件
-                StateMachineTerminatedEvent?.Invoke(this, TerminationReason, StatusCode, isRestarting);
-                AppLogger.Log($"状态机 {st_Name} 已终止，原因：{TerminationReason}");
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"终止状态机 {st_Name} 时发生错误：{ex.Message}");
-                // 即使出错也要设置结束状态
-                IsTerminated = true;
-                TerminatedTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                TerminationReason = $"终止时出错：{ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// 检查状态机是否可以继续运行
-        /// </summary>
-        /// <returns>如果已终止返回false，否则返回true</returns>
-        public bool CanContinue()
-        {
-            return !IsTerminated;
-        }
-        
-        /// <summary>
-        /// 重置状态机（清除结束状态，允许重新启动）
-        /// </summary>
-        /// <param name="isRestarting">是否为重启操作</param>
-        public void Reset(bool isRestarting = false)
-        {
-            if (!IsTerminated)
-            {
-                AppLogger.Warning($"状态机 {st_Name} 尚未结束，无需重置");
-                return;
-            }
-            
-            try
-            {
-                IsTerminated = false;
-                TerminatedTime = 0;
-                TerminationReason = string.Empty;
-                _currentProcedureBase = null;
-                _pendingSwitchType = null;
-                
-                if (isRestarting)
-                {
-                    AppLogger.Log($"状态机 {st_Name} 已重置（重启模式），可以重新启动");
-                }
-                else
-                {
-                    AppLogger.Log($"状态机 {st_Name} 已重置，可以重新启动");
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"重置状态机 {st_Name} 时发生错误：{ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// 内部重启方法（支持重启事件和回调）
-        /// </summary>
-        /// <param name="startNodeType">重启后的起始节点类型</param>
-        /// <param name="reason">重启原因</param>
-        /// <param name="requestingNode">请求重启的节点</param>
-        internal void InternalRestart(System.Type startNodeType, string reason, StateNodeBase requestingNode, int statusCode = 0)
-        {
-            try
-            {
-                var previousNode = _currentProcedureBase;
-                var targetNodeType = startNodeType ?? (ProcedureTypes.Count > 0 ? ProcedureTypes[0] : null);
-                
-                // 设置状态码
-                StatusCode = statusCode;
-                
-                // 更新重启统计信息
-                RestartCount++;
-                LastRestartTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                LastRestartReason = reason ?? "未知原因";
-                
-                AppLogger.Log($"状态机 {st_Name} 开始第 {RestartCount} 次重启，原因：{reason}，状态码：{statusCode}，目标节点：{targetNodeType?.Name ?? "无"}，请求重启操作的节点：{requestingNode?.GetType().Name ?? "无"}");
-                
-                // 1. 如果状态机未结束，先终止它（标记为重启操作）
-                if (!IsTerminated)
-                {
-                    Terminate($"为重启而终止：{reason}", true, statusCode); // 传递true表示这是重启操作
-                }
-                
-                // 2. 调用当前节点的OnRestart回调（如果存在）
-                if (previousNode != null)
-                {
-                    try
-                    {
-                        previousNode.OnRestart(reason, targetNodeType);
-                        AppLogger.Log($"已调用节点 {previousNode.GetType().Name} 的OnRestart回调");
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Error($"节点 {previousNode.GetType().Name} 的OnRestart回调执行失败：{ex.Message}");
-                    }
-                }
-                
-                // 3. 重置状态机（重启模式）
-                Reset(true);
-                
-                // 4. 触发重启事件
-                try
-                {
-                    StateMachineRestartEvent?.Invoke(this, reason, previousNode, targetNodeType, StatusCode);
-                    AppLogger.Log($"已触发状态机重启事件，重启次数：{RestartCount}");
+                    _currentProcedureBase.OnLeave(null, false);
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Error($"触发重启事件时发生错误：{ex.Message}");
+                    AppLogger.Error($"状态机 {st_Name} 停止节点时出错：{ex.Message}");
                 }
-                
-                // 5. 重新启动到指定节点
-                if (targetNodeType != null)
-                {
-                    StartNode(targetNodeType);
-                }
-                else
-                {
-                    StartNode();
-                }
-                
-                AppLogger.Log($"状态机 {st_Name} 第 {RestartCount} 次重启成功，当前节点：{_currentProcedureBase?.GetType().Name ?? "无"}，总重启次数：{RestartCount}");
+                _currentProcedureBase = null;
             }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"状态机 {st_Name} 第 {RestartCount} 次重启失败：{ex.Message}");
-                throw;
-            }
+
+            IsTerminated = true;
+            StatusCode = statusCode;
+            
+            // 触发结束事件
+            StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode, false);
         }
-        
-        #endregion
-
-
-        #region 节点行为
 
         /// <summary>
-        /// 停止状态机（不同于终止，停止是暂停运行但不清除状态）
+        /// 暂停状态机
         /// </summary>
-        /// <param name="reason">停止原因</param>
+        public bool IsPaused { get; set; } = false;
+
+        /// <summary>
+        /// 重启状态机
+        /// </summary>
+        /// <param name="startNodeType">启动节点类型，null则使用默认</param>
+        /// <param name="reason">重启原因</param>
         /// <param name="statusCode">状态码</param>
-        public void Stop(string reason = "手动停止", int statusCode = 0)
+        public void Restart(Type startNodeType = null, string reason = "Restart", int statusCode = 0)
         {
-            if (IsTerminated)
+            // 1. 如果还在运行，先停止
+            if (!IsTerminated)
             {
-                AppLogger.Warning($"状态机 {st_Name} 已经终止，无法停止");
-                return;
+                Stop( statusCode,$"Restarting: {reason}");
             }
-            
-            if (IsStopped)
+
+            // 2. 重置标志位
+            IsTerminated = false;
+            IsPaused = false;
+            StatusCode = statusCode;
+            _pendingSwitchType = null;
+
+            // 3. 触发重启事件
+            StateMachineRestartEvent?.Invoke(this, reason, null, startNodeType, statusCode);
+
+            // 4. 重新启动
+            if (startNodeType != null)
             {
-                AppLogger.Warning($"状态机 {st_Name} 已经停止，无法重复停止");
-                return;
+                StartNode(startNodeType);
             }
-            
-            try
+            else
             {
-                // 设置停止状态和状态码
-                IsStopped = true;
-                StoppedTime = Utility.Timestamp.UnixTimestampMilliseconds;
-                StopReason = reason ?? "未知原因";
-                StatusCode = statusCode;
-                
-                // 调用当前节点的停止方法
-                if (_currentProcedureBase != null)
-                {
-                    _currentProcedureBase.OnStop(reason);
-                    AppLogger.Log($"状态机 {st_Name} 停止时调用了当前节点的OnStop：{_currentProcedureBase.GetType().Name}");
-                }
-                Terminate($"为停止而终止：{reason}", true, statusCode); // 传递true表示这是停止操作
-                AppLogger.Log($"状态机 {st_Name} 已停止，原因：{reason}，状态码：{statusCode}");
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"停止状态机 {st_Name} 时发生错误：{ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// 恢复已停止的状态机
-        /// </summary>
-        /// <param name="reason">恢复原因</param>
-        public void Resume(string reason = "手动恢复")
-        {
-            if (IsTerminated)
-            {
-                AppLogger.Warning($"状态机 {st_Name} 已经终止，无法恢复");
-                return;
-            }
-            
-            if (!IsStopped)
-            {
-                AppLogger.Warning($"状态机 {st_Name} 未停止，无需恢复");
-                return;
-            }
-            
-            try
-            {
-                // 清除停止状态
-                IsStopped = false;
-                StoppedTime = 0;
-                StopReason = string.Empty;
-                
-                AppLogger.Log($"状态机 {st_Name} 已恢复运行，原因：{reason}");
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"恢复状态机 {st_Name} 时发生错误：{ex.Message}");
+                StartNode();
             }
         }
         
         #endregion
 
+    }
+
+    /// <summary>
+    /// 泛型状态机 (2025 Refactored)
+    /// 提供强类型的 Owner 访问
+    /// </summary>
+    /// <typeparam name="T">持有者类型</typeparam>
+    public class StateMachine<T> : StateMachine where T : class
+    {
+        /// <summary>
+        /// 强类型的持有者
+        /// </summary>
+        public new T Owner => (T)base.Owner;
+
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="owner">持有者实例</param>
+        /// <param name="name">状态机名称</param>
+        /// <param name="priority">优先级</param>
+        public StateMachine(T owner, string name = null, uint priority = 0) : base(owner, name, priority)
+        {
+        }
+
+        /// <summary>
+        /// 添加节点（类型安全检查）
+        /// </summary>
+        /// <param name="procedureBase">状态节点</param>
+        public new void AddNode(StateNodeBase procedureBase)
+        {
+            // 🔒 安全锁：确保添加的节点类型与状态机的泛型类型 T 一致
+            if (!(procedureBase is StateNodeBase<T>))
+            {
+                throw new AppException($"类型不匹配错误！\n" +
+                                     $"状态机 Owner 类型: {typeof(T).Name}\n" +
+                                     $"试图添加的节点类型: {procedureBase.GetType().Name}\n" +
+                                     $"该节点必须继承自: StateNodeBase<{typeof(T).Name}>");
+            }
+
+            base.AddNode(procedureBase);
+        }
+
+        /// <summary>
+        /// 添加节点（类型安全检查 - 泛型版）
+        /// </summary>
+        public new void AddNode<TNode>() where TNode : StateNodeBase, new()
+        {
+            // 实例化并检查
+            var node = new TNode();
+            AddNode(node); // 调用上面的 AddNode 进行检查
+        }
     }
 }

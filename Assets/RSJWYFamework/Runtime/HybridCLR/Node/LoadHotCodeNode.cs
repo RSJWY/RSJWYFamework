@@ -27,9 +27,9 @@ namespace RSJWYFamework.Runtime
             {
                 await UniTask.WaitForSeconds(0.5f);
                 //获取数据
-                var _loadLis = (HotCodeDLL)GetBlackboardValue("LoadList");
-                var _DllDic = (Dictionary<string, HotCodeBytes>)GetBlackboardValue("HotcodeDic");
-                var MFAOTbytesMap= (Dictionary<string, byte[]>)GetBlackboardValue("MFAOTDic");
+                var _loadLis = (HotCodeDLL)_sm.GetBlackboardValue("LoadList");
+                var _DllDic = (Dictionary<string, HotCodeBytes>)_sm.GetBlackboardValue("HotcodeDic");
+                var MFAOTbytesMap= (Dictionary<string, byte[]>)_sm.GetBlackboardValue("MFAOTDic");
                 Dictionary<string, Assembly> hotCode = new();
 
                 await UniTask.SwitchToThreadPool();
@@ -55,7 +55,7 @@ namespace RSJWYFamework.Runtime
                 }
                 catch (System.Exception ex)
                 {
-                    StopStateMachine($"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}",500);
+                    _sm.Stop(500,$"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
                     throw new AppException($"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
                 }
 
@@ -85,13 +85,13 @@ namespace RSJWYFamework.Runtime
                 }
                 catch (System.Exception ex)
                 {
-                    StopStateMachine($"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}",500);
+                    _sm.Stop(500,$"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
                     throw new AppException($"热更加载DLL流程，加载热更：{_str_err_name} 时发生异常，{ex}");
                 }
                 await UniTask.SwitchToMainThread();
                 _DllDic.Clear();
-                SetBlackboardValue("HotCodeAssembly",hotCode);
-                SwitchToNode<LoadHotCodeDoneNode>();
+                _sm.SetBlackboardValue("HotCodeAssembly",hotCode);
+                _sm.SwitchNode<LoadHotCodeDoneNode>();
             });
         }
 
