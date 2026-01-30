@@ -17,6 +17,7 @@ MonoBehaviour:
   Version: TestV0.1
   Loglevel: 4
   AESKey: AA
+  UpdatePackageVersionNumberOfRetries: 3
   YooAssetPackageData:
   - PackageName: PrefabPackage
     PackageTips: 
@@ -24,3 +25,7 @@ MonoBehaviour:
     PackageTips: 
   PlayMode: 0
   hostServerIP: http://127.0.0.1
+  OverwriteInstallClearMode: 1
+  FileClearMode: 0
+  ClearLocations: []
+  ClearTags: []

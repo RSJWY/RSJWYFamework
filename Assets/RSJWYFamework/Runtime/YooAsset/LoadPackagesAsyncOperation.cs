@@ -1,3 +1,4 @@
+using System;
 using RSJWYFamework.Runtime;
 using YooAsset;
 
@@ -13,6 +14,33 @@ namespace RSJWYFamework.Runtime
         }
         private readonly StateMachine<LoadPackagesAsyncOperation> _smc;
         private LoadPackageSteps _steps = LoadPackageSteps.None;
+
+        /// <summary>
+        /// 开始下载
+        /// </summary>
+        public Action<DownloadFileData> OnStartDownload;
+        
+        /// <summary>
+        /// 下载完成
+        /// </summary>
+        public Action<DownloaderFinishData> OnDownloadOver;
+        
+        
+        /// <summary>
+        /// 下载进度更新
+        /// </summary>
+        public Action<DownloadUpdateData> OnDownloadProgressUpdate;
+        
+        /// <summary>
+        /// 下载错误
+        /// </summary>
+        public Action<DownloadErrorData> OnDownloadError;
+        
+        
+        /// <summary>
+        /// 下载完成后清理缓存文件完成回调
+        /// </summary>
+        public Action<YooAsset.AsyncOperationBase> OnClearCacheFiles;
         
         
         public LoadPackagesAsyncOperation(string packageName, EPlayMode playMode)

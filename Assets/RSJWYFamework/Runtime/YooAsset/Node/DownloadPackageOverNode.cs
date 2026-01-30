@@ -17,11 +17,12 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
+        public override UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             var packageName=(string)_sm.GetBlackboardValue("PackageName");
             AppLogger.Log($"下载包{packageName}新资源完成");
             _sm.SwitchNode<ClearPackageCacheNode>();
+            return UniTask.CompletedTask;
         }
 
     }

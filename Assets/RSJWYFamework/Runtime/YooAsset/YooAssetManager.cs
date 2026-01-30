@@ -22,7 +22,17 @@ namespace RSJWYFamework.Runtime
         {
             //获取数据并存入数据
             var projectConfig = ModuleManager.GetModule<DataManager>().GetFirstDataSB<AppConfig>();
-            Utility.YooAsset.Setting(projectConfig.hostServerIP, projectConfig.ProjectName, projectConfig.APPName, projectConfig.Version, projectConfig.UpdatePackageVersionNumberOfRetries);
+            Utility.YooAsset.Setting(
+                hostServerIP: projectConfig.hostServerIP, 
+                projectName: projectConfig.ProjectName, 
+                appName: projectConfig.APPName, 
+                appVersion: projectConfig.Version, 
+                installClearMode: projectConfig.OverwriteInstallClearMode,
+                failedTryAgainNum: projectConfig.UpdatePackageVersionNumberOfRetries,
+                fileClearMode: projectConfig.FileClearMode,
+                clearLocations: projectConfig.ClearLocations,
+                clearTags: projectConfig.ClearTags
+                );
             UniTask[] taskArr=new UniTask[projectConfig.YooAssetPackageData.Count];
             for (int i = 0; i < projectConfig.YooAssetPackageData.Count; i++)
             {

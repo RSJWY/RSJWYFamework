@@ -36,18 +36,20 @@ namespace RSJWYFamework.Runtime
             string version = PlayerPrefs.GetString($"{packageName}_VERSION", string.Empty);
             if (string.IsNullOrEmpty(version))
             {
-                AppLogger.Error($"未找到上次初始化的{packageName}的版本号，请检查网络");
-                _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
+                AppLogger.Error($"未找到上次初始化的{packageName}的版本号");
+                _sm.Stop(500,$"{packageName}初始化失败，请联网更新");
             }
             else
             {
-                AppLogger.Log($"上次初始化的{packageName}的版本号为{version}，尝试加载本地清单");
-                var manifestOp = package.UpdatePackageManifestAsync(version);
+                _sm.SetBlackboardValue("PackageVersion", version);
+                AppLogger.Log($"上次初始化的{packageName}的版本号为{version}，继续后续流程");
+                _sm.SwitchNode<UpdatePackageManifestNode>();
+                /*var manifestOp = package.UpdatePackageManifestAsync(version);
                 await manifestOp.ToUniTask();
                 if (manifestOp.Status != EOperationStatus.Succeed)
                 {
                     AppLogger.Error($"加载包{packageName}版本{version}清单失败！Error：{manifestOp.Error}");
-                    _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
+                    _sm.Stop(400,$"{packageName}初始化失败，请检查网络以更新资源包");
                 }
                 else
                 {
@@ -58,7 +60,7 @@ namespace RSJWYFamework.Runtime
                         AppLogger.Error($"包{packageName}版本{version}有{downloader.TotalDownloadCount}个资源上次未完成下载，本地内容不完整，请连接网络以进行完整下载");
                         _sm.Stop(500,$"{packageName}初始化失败，请检查网络以更新资源包");
                     }
-                }
+                }*/
             }
         }
 

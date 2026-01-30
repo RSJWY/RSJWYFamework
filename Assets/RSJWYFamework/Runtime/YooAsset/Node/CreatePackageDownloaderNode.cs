@@ -22,7 +22,7 @@ namespace RSJWYFamework.Runtime
         {
         }
 
-        public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
+        public override UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             var packageName = (string)_sm.GetBlackboardValue("PackageName");
             var package = YooAssets.GetPackage(packageName);
@@ -41,6 +41,7 @@ namespace RSJWYFamework.Runtime
                 AppLogger.Log($"包{packageName}发现新文件！下载的文件总量：{downloader.TotalDownloadCount}，总大小：{downloader.TotalDownloadBytes}");
                 _sm.SwitchNode<DownloadPackageFilesNode>();
             }
+            return UniTask.CompletedTask;
         }
     }
 }

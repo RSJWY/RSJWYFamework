@@ -6,17 +6,15 @@ namespace RSJWYFamework.Runtime
     /// <summary>
     /// 更新资源清单
     /// </summary>
-    public class UpdatePackageManifestNode:YooAssetNode
+    public class UpdatePackageManifestNode: StateNodeBase<LoadPackagesAsyncOperation>
     {
     
         public override void OnInit()
         {
-           base.OnInit();
         }
 
         public  override void OnClose()
         {
-            base.OnClose();
         }
 
         public  override async UniTask OnEnter(StateNodeBase lastProcedureBase)
@@ -30,17 +28,14 @@ namespace RSJWYFamework.Runtime
             var packageVersion = (string)_sm.GetBlackboardValue("PackageVersion");
             var package = YooAssets.GetPackage(packageName);
             
-            AppLogger.Log($"更新包{packageName}资源清单");
+            AppLogger.Log($"更新包{packageName}资源清单，版本{packageVersion}");
             var operation = package.UpdatePackageManifestAsync(packageVersion,Utility.YooAsset.Timeout);
             await operation.ToUniTask();
 
             if (operation.Status != EOperationStatus.Succeed)
             {
-
-                AppLogger.Error($"更新包{packageName}清单失败！Error：{operation.Error} ");
-                
                 _sm.SetBlackboardValue("NetworkNormal", false);
-                //_sm.SwitchNode<UpdatePackageManifestNode>();
+                AppLogger.Error($"更新包{packageName}清单失败！Error：{operation.Error} ");
                 _sm.Stop(500,$"更新包{packageName}清单文件失败");
             }
             else
