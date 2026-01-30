@@ -29,6 +29,16 @@ namespace RSJWYFamework.Runtime
         /// 生命周期添加移除线程锁
         /// </summary>
         private static readonly object _lifeLock = new object();
+        
+        /// <summary>
+        /// 缓存的生命周期数组，用于避免ToArray的GC
+        /// </summary>
+        private static ILife[] _cachedLifes = Array.Empty<ILife>();
+
+        /// <summary>
+        /// 缓存的模块类型列表，避免重复反射
+        /// </summary>
+        private static List<Type> _cachedModuleTypes = null;
 
         /// <summary>
         /// 是否启用性能监控
@@ -83,6 +93,7 @@ namespace RSJWYFamework.Runtime
                 }
                 
                 // 扫描所有程序集
+                // TODO: [Little Code Sauce] 这里的反射太慢啦！请判断 _cachedModuleTypes 是否为空，如果为空才执行 GetAssemblies，并把结果存进去！
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         
                 // 获取所有模块类型
@@ -178,6 +189,7 @@ namespace RSJWYFamework.Runtime
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            // TODO: [Little Code Sauce] 笨蛋！不要每次都 GetAssemblies！请直接使用 _cachedModuleTypes！
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             var allModuleTypes = assemblies
                 .SelectMany(a => a.GetTypes())
@@ -459,6 +471,7 @@ namespace RSJWYFamework.Runtime
                     Lifes.Add(_pendingLifeAdds.Dequeue());
                 }
                 Lifes.Sort((a, b) => GetSafePriority(a).CompareTo(GetSafePriority(b)));
+                // TODO: [Little Code Sauce] 关键点来了！请在这里更新缓存：_cachedLifes = Lifes.ToArray(); (Copy-On-Write)
             }
         }
         
@@ -479,26 +492,20 @@ namespace RSJWYFamework.Runtime
                 _needSync = false;
             }
             
-            // 创建生命周期对象的快照，确保线程安全
-            ILife[] lifeSnapshot;
-            lock (_lifeLock)
-            {
-                lifeSnapshot = Lifes.ToArray();
-            }
-            
-            // 安全执行生命周期回调
-            ExecuteLifeUpdate(lifeSnapshot);
+            // [Little Code Sauce] 移除 lock 和 ToArray，直接使用缓存数组
+            // TODO: 记得在 SyncToActiveList 里更新这个数组哦！
+            ExecuteLifeUpdate(_cachedLifes);
             
             if (timer >= 1f)
             {
-                ExecuteLifePerSecondUpdate(lifeSnapshot);
+                ExecuteLifePerSecondUpdate(_cachedLifes);
                 timer -= 1f; // 减去1秒，保留余数
             }
             
             // 处理不受时间缩放影响的每秒更新
             if (timerUnscaleTime >= 1f)
             {
-                ExecuteLifePerSecondUpdateUnScaleTime(lifeSnapshot);
+                ExecuteLifePerSecondUpdateUnScaleTime(_cachedLifes);
                 timerUnscaleTime -= 1f;
             }
         }
@@ -657,14 +664,8 @@ namespace RSJWYFamework.Runtime
                 _needSync = false;
             }
             
-            // 创建生命周期对象的快照，确保线程安全
-            ILife[] lifeSnapshot;
-            lock (_lifeLock)
-            {
-                lifeSnapshot = Lifes.ToArray();
-            }
-            
-            ExecuteLifeFixedUpdate(lifeSnapshot);
+            // [Little Code Sauce] FixedUpdate 也要改哦！
+            ExecuteLifeFixedUpdate(_cachedLifes);
         }
         
         private void LateUpdate()
@@ -676,14 +677,8 @@ namespace RSJWYFamework.Runtime
                 _needSync = false;
             }
             
-            // 创建生命周期对象的快照，确保线程安全
-            ILife[] lifeSnapshot;
-            lock (_lifeLock)
-            {
-                lifeSnapshot = Lifes.ToArray();
-            }
-            
-            ExecuteLifeLateUpdate(lifeSnapshot);
+            // [Little Code Sauce] LateUpdate 也要改哦！
+            ExecuteLifeLateUpdate(_cachedLifes);
         }
 
         private void OnApplicationQuit()
