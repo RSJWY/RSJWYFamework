@@ -110,6 +110,27 @@ namespace RSJWYFamework.Runtime
                 return;
             }
             ModuleManager.GetModule<DataManager>().AddDataSB(AppConfig);
+
+            // =========================================================
+            // 小码酱添加：尝试加载外部 AppConfig.json 覆盖默认配置
+            // =========================================================
+            try
+            {
+                string overridePath = Path.Combine(JsonConfigPath, "AppConfig.json");
+                if (File.Exists(overridePath))
+                {
+                    Debug.Log($"[AppConfigManager] 检测到外部配置文件，正在应用覆盖：{overridePath}");
+                    string json = File.ReadAllText(overridePath);
+                    // 使用 PopulateObject 将 JSON 数据注入到现有的 ScriptableObject 实例中
+                    JsonConvert.PopulateObject(json, AppConfig);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AppConfigManager] 应用外部 AppConfig.json 失败：{ex.Message}");
+            }
+            // =========================================================
+
             try
             {
                 if (Directory.Exists(JsonConfigPath))
