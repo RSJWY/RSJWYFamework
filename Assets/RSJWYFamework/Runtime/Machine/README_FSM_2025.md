@@ -115,7 +115,7 @@ public class PlayerLoadingState : StateNodeBase<PlayerController>
         Machine.SwitchNode<PlayerIdleState>();
     }
 
-    public override async UniTask OnLeave(StateNodeBase next, bool isRestarting)
+    public override async UniTask OnLeave(StateNodeBase next)
     {
         // 退出时也可以 await
         AppLogger.Log("清理资源中...");

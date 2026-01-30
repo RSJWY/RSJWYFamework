@@ -35,8 +35,7 @@ namespace RSJWYFamework.Runtime
         /// 离开当前流程 (Async)
         /// </summary>
         /// <param name="nextProcedureBase">下一个进入的流程</param>
-        /// <param name="isRestarting">是否为重启操作，默认为false</param>
-        public virtual UniTask OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
+        public virtual UniTask OnLeave(StateNodeBase nextProcedureBase)
         {
             return UniTask.CompletedTask;
         }
@@ -51,14 +50,6 @@ namespace RSJWYFamework.Runtime
         /// 流程秒更新
         /// </summary>
         public virtual void OnUpdateSecond(){}
-        
-        /// <summary>
-        /// 节点重启回调
-        /// 当状态机重启时调用，在OnLeave和OnEnter之间执行
-        /// </summary>
-        /// <param name="reason">重启原因</param>
-        /// <param name="targetNodeType">重启后的目标节点类型</param>
-        public virtual void OnRestart(string reason, System.Type targetNodeType){}
         
         /// <summary>
         /// 节点停止回调

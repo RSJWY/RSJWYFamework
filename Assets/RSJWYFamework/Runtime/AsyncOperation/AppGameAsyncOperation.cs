@@ -52,9 +52,7 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         protected abstract void OnSecondUpdateUnScaleTime();
 
-
-
-
+        
         /// <summary>
         /// 异步操作系统是否繁忙
         /// </summary>

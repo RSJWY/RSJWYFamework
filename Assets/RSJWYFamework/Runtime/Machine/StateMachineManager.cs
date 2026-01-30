@@ -229,14 +229,11 @@ namespace RSJWYFamework.Runtime
         /// <param name="stateMachine">结束的状态机</param>
         /// <param name="reason">结束原因</param>
         /// <param name="stateCode">状态码</param>
-        /// <param name="isRestarting">是否重启</param>
-        private void OnStateMachineTerminated(StateMachine stateMachine, string reason, int stateCode, bool isRestarting)
+        private void OnStateMachineTerminated(StateMachine stateMachine, string reason, int stateCode)
         {
             if (!AutoCleanupTerminated)
                 return;
-            // 如果是重启，不清理
-            if (isRestarting)
-                return;
+            
             AppLogger.Log($"状态机 {stateMachine.st_Name} 已结束，原因：{reason}，状态码：{stateCode} 将在 {CleanupDelayMs}ms 后自动清理");
             
             // 延迟清理，避免立即清理可能导致的问题

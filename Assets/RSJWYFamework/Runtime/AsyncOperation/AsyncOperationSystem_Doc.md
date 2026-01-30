@@ -143,7 +143,7 @@ public async UniTask Void RunTask()
 {
     var op = new MyDownloadOperation();
     // StartAsync 会自动将任务注册到系统并启动
-    op.StartAddAppAsyncOperationSystem("Download_01");
+    // op.StartAddAppAsyncOperationSystem("Download_01");
     
     try 
     {
@@ -167,15 +167,28 @@ AppAsyncOperationSystem.StartOperation("FireAndForget", op2);
 
 ### 4.3 状态机异步化
 
-将现有的 `StateMachine` 包装为异步操作，使其能够被 `await` 或统一管理。
+通过继承 `AppStateMachineAsyncOperation`，可以将状态机的生命周期映射到异步操作中。
 
 ```csharp
-var fsmOp = new AppStateMachineAsyncOperation(myStateMachine, typeof(InitState));
-// 启动状态机，生命周期由系统接管
-fsmOp.StartAsync();
+public class MyFsmOperation : AppStateMachineAsyncOperation
+{
+    public MyFsmOperation()
+    {
+        // 1. 创建状态机
+        var sm = new StateMachine<MyFsmOperation>(this, "MyFSM");
+        sm.AddNode(new InitNode());
+        
+        // 2. 初始化基类（绑定状态机）
+        InitStateMachine(sm, typeof(InitNode));
+        
+        // 3. 注册到系统
+        AppAsyncOperationSystem.StartOperation("MyFSM_Op", this);
+    }
+}
 
-// 可以在某处等待其结束（如果状态机内部会Stop）
-await fsmOp.ToUniTask();
+// 使用
+var op = new MyFsmOperation();
+await op.ToUniTask();
 ```
 
 ---
@@ -185,7 +198,7 @@ await fsmOp.ToUniTask();
 ### 5.1 扁平化调度 (Flattening)
 
 旧版实现中，父任务负责递归调用子任务的 Update。
-**现在**：推荐所有子任务都通过 `StartAddAppAsyncOperationSystem` 注册为独立的一级任务。
+**现在**：推荐所有子任务都通过 `AppAsyncOperationSystem.StartOperation` 注册为独立的一级任务。
 *   **优势**：避免深层递归，提高 CPU Cache 命中率；时间片检查对所有任务生效，避免子任务“偷跑”导致掉帧。
 
 ### 5.2 时间片 (Time Slicing)

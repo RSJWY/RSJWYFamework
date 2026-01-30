@@ -92,14 +92,7 @@ namespace RSJWYFamework.Runtime
             }
         }
 
-        /// <summary>
-        /// 开始添加异步操作到异步操作系统
-        /// </summary>
-        /// <param name="asyncOperationName"></param>
-        public void StartAddAppAsyncOperationSystem(string asyncOperationName)
-        {
-            AppAsyncOperationSystem.StartOperation(asyncOperationName,this);
-        }
+
 
 
         
@@ -447,7 +440,10 @@ namespace RSJWYFamework.Runtime
         {
             if (Status == AppAsyncOperationStatus.None)
             {
-                StartOperation();
+                // 自动将任务注册到系统并启动
+                // 使用当前类名作为默认名称，防止名称为空
+                string opName = AsyncOperationName ?? this.GetType().Name;
+                AppAsyncOperationSystem.StartOperation(opName, this);
             }
 
             if (_utcs != null)

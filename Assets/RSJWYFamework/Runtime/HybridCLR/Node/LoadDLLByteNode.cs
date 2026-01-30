@@ -7,9 +7,9 @@ using YooAsset;
 namespace RSJWYFamework.Runtime
 {
     /// <summary>
-    /// 获取DLL
+    /// 获取DLL字节流节点
     /// </summary>
-    public class LoadDLLByteNode:StateNodeBase
+    public class LoadDLLByteNode : StateNodeBase<LoadHotCodeAsyncOperation>
     {
         public override void OnInit()
         {
@@ -21,92 +21,97 @@ namespace RSJWYFamework.Runtime
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            AppLogger.Log($"加载热更代码数据");
-            await Task();
+            AppLogger.Log($"[LoadDLLByteNode] 开始加载热更代码数据...");
+            await ExecuteTask();
         }
 
-        private async UniTask Task()
+        private async UniTask ExecuteTask()
         {
+            var package = ModuleManager.GetModule<YooAssetManager>().GetPackage("RawFilePackage");
+            const string HOT_LIST_NAME = "HotUpdateCode_HotList";
+
+            if (!package.CheckLocationValid(HOT_LIST_NAME))
+            {
+                AppLogger.Error($"[LoadDLLByteNode] 无法找到热更列表文件: {HOT_LIST_NAME}");
+                _sm.Stop(500, "无法得到热更新dll列表");
+                return;
+            }
+
+            // 1. 加载热更列表 JSON
+            var listFileHandle = package.LoadRawFileAsync(HOT_LIST_NAME);
+            await listFileHandle.ToUniTask();
             
-                var package=ModuleManager.GetModule<YooAssetManager>().GetPackage("RawFilePackage");
-                if (!package.CheckLocationValid("HotUpdateCode_HotList"))
+            var hotCodeList = JsonConvert.DeserializeObject<HotCodeDLL>(listFileHandle.GetRawFileText());
+            var hotCodeBytesMap = new Dictionary<string, HotCodeBytes>();
+
+            // 2. 加载热更 DLL 和 PDB
+            foreach (var assetName in hotCodeList.HotCode)
+            {
+                string dllName = $"{assetName}.dll";
+                string pdbName = $"{assetName}.pdb";
+
+                if (package.CheckLocationValid(dllName))
                 {
-                    AppLogger.Error("无法加载列表文件");
-                    _sm.Stop(500);
-                    return;
+                    var hotCodeData = new HotCodeBytes();
+
+                    // 加载 DLL
+                    var dllHandle = package.LoadRawFileAsync(dllName);
+                    await dllHandle.ToUniTask();
+                    hotCodeData.dllBytes = dllHandle.GetRawFileData();
+                    dllHandle.Release(); // 及时释放句柄，数据已拷贝到 byte[]
+
+                    // 加载 PDB (可选)
+                    if (package.CheckLocationValid(pdbName))
+                    {
+                        var pdbHandle = package.LoadRawFileAsync(pdbName);
+                        await pdbHandle.ToUniTask();
+                        hotCodeData.pdbBytes = pdbHandle.GetRawFileData();
+                        pdbHandle.Release();
+                    }
+                    else
+                    {
+                        AppLogger.Warning($"[LoadDLLByteNode] PDB文件缺失: {pdbName}，将无法显示堆栈行号");
+                    }
+
+                    hotCodeBytesMap.Add(assetName, hotCodeData);
+                    AppLogger.Log($"[LoadDLLByteNode] 已加载热更DLL: {dllName}");
                 }
+                else
+                {
+                    AppLogger.Error($"[LoadDLLByteNode] 严重错误：找不到热更DLL资源: {dllName}");
+                    // 这里是否需要 Stop 视业务需求而定，通常缺失核心代码应该报错停止
+                }
+            }
+
+            // 3. 加载 AOT 补充元数据 DLL
+            var aotMetadataMap = new Dictionary<string, byte[]>();
+            foreach (var assetName in hotCodeList.MetadataForAOTAssemblies)
+            {
+                string dllName = $"{assetName}.dll";
+
+                if (package.CheckLocationValid(dllName))
+                {
+                    var dllHandle = package.LoadRawFileAsync(dllName);
+                    await dllHandle.ToUniTask();
                     
-                //获取列表
-                var MFALisRFH = package.LoadRawFileAsync("HotUpdateCode_HotList");
-                await MFALisRFH.ToUniTask();
-                var loadLis = JsonConvert.DeserializeObject<HotCodeDLL>(MFALisRFH.GetRawFileText());
-                var hotCodeBytesMap = new Dictionary<string, HotCodeBytes>();
-                //加载热更代码和pdb
-                foreach (var asset in loadLis.HotCode)
-                {
-                    //string dllPath = MyTool.GetYooAssetWebRequestPath(asset);
-                    string _dllname = $"{asset}.dll";
-                    string _pdbname = $"{asset}.pdb";
-                    //Debug.Log($"加载资产:{_n}");
-                    //资源地址是否有效
-                    if (package.CheckLocationValid(_dllname))
-                    {
-                        var hotcode = new HotCodeBytes();
-                        //执行加载
-                        var _rfh = package.LoadRawFileAsync(_dllname);
-                        await _rfh.ToUniTask();
-                        //转byte数组
-                        hotcode.dllBytes = _rfh.GetRawFileData();
-                        if (package.CheckLocationValid(_pdbname))
-                        {
-                            var _rfhPDB = package.LoadRawFileAsync(_pdbname);
-                            await _rfhPDB.ToUniTask();
-                            //转byte数组
-                            hotcode.pdbBytes = _rfhPDB.GetRawFileData();
-                        }
-                        else
-                        {
-                            AppLogger.Warning($"热更获取PDB数据流程，加载PDB资源文件地址：{_dllname}无效，将无法打印行号");
-                        }
-                        hotCodeBytesMap.Add(asset,hotcode);
-                        //Debug.Log($"dll:{asset}  size:{assetData.Length}");
-                        AppLogger.Log($"热更加载DLL流程，加载资源dll:{_dllname}");
-                        _rfh.Release();
-                    }
-                    else
-                    {
-                        AppLogger.Error($"热更获取DLL数据流程，加载热更代码资源文件地址：{_dllname}无效");
-                    }
+                    var dllBytes = dllHandle.GetRawFileData();
+                    aotMetadataMap.Add(assetName, dllBytes);
+                    
+                    AppLogger.Log($"[LoadDLLByteNode] 已加载AOT补充元数据: {dllName}");
+                    dllHandle.Release();
                 }
-                //加载元数据
-                var MFAOTbytesMap = new Dictionary<string, byte[]>();
-                foreach (var asset in loadLis.MetadataForAOTAssemblies)
+                else
                 {
-                    //string dllPath = MyTool.GetYooAssetWebRequestPath(asset);
-                    string _dllname = $"{asset}.dll";
-                    //Debug.Log($"加载资产:{_n}");
-                    //资源地址是否有效
-                    if (package.CheckLocationValid(_dllname))
-                    {
-                        //执行加载
-                        var _rfh = package.LoadRawFileAsync(_dllname);
-                        await _rfh.ToUniTask();
-                        //转byte数组
-                        var MFAOT = _rfh.GetRawFileData();
-                        MFAOTbytesMap.Add(asset,MFAOT);
-                        //Debug.Log($"dll:{asset}  size:{assetData.Length}");
-                        AppLogger.Log($"热更加载DLL流程，加载补充元数据资源dll:{_dllname}");
-                        _rfh.Release();
-                    }
-                    else
-                    {
-                        AppLogger.Error($"热更获取DLL数据流程，加载资源文件地址：{_dllname}无效");
-                    }
+                    AppLogger.Error($"[LoadDLLByteNode] 严重错误：找不到AOT元数据资源: {dllName}");
                 }
-                _sm.SetBlackboardValue("LoadList",loadLis);
-                _sm.SetBlackboardValue("HotcodeDic",hotCodeBytesMap);
-                _sm.SetBlackboardValue("MFAOTDic",MFAOTbytesMap);
-                _sm.SwitchNode<LoadHotCodeNode>();
+            }
+
+            // 4. 传递数据到黑板
+            _sm.SetBlackboardValue("LoadList", hotCodeList);
+            _sm.SetBlackboardValue("HotcodeDic", hotCodeBytesMap);
+            _sm.SetBlackboardValue("MFAOTDic", aotMetadataMap);
+            
+            _sm.SwitchNode<LoadHotCodeNode>();
         }
 
         public override void OnUpdate()

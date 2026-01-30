@@ -126,22 +126,19 @@ namespace RSJWYFamework.Runtime
         /// <summary>
         /// ComfyUI任务状态机终止事件
         /// </summary>
-        private void OnStateMachineTerminated(StateMachine arg1, string stopReason, int code, bool isRestart)
+        private void OnStateMachineTerminated(StateMachine arg1, string stopReason, int code)
         {
-            if (isRestart==false)
+            // 非重启状态下，根据code判断任务是否成功
+            if (code == 0)
             {
-                // 非重启状态下，根据code判断任务是否成功
-                if (code == 0)
-                {
-                    _steps = ComfyUITaskStatus.Done;
-                    Status=AppAsyncOperationStatus.Succeed;
-                }
-                else
-                {
-                    _steps = ComfyUITaskStatus.Error;
-                    Status=AppAsyncOperationStatus.Failed;
-                    Error=stopReason;
-                }
+                _steps = ComfyUITaskStatus.Done;
+                Status=AppAsyncOperationStatus.Succeed;
+            }
+            else
+            {
+                _steps = ComfyUITaskStatus.Error;
+                Status=AppAsyncOperationStatus.Failed;
+                Error=stopReason;
             }
         }
 

@@ -117,7 +117,7 @@ public class ComfyUITaskTest : MonoBehaviour
         currentTask.OnProgress += OnTaskProgress;
         
         // 启动任务
-        currentTask.StartAddAppAsyncOperationSystem($"ComfyUITestTask_{clientId}");
+        //currentTask.StartAddAppAsyncOperationSystem($"ComfyUITestTask_{clientId}");
         
         Debug.Log($"任务已启动，客户端ID: {clientId}");
         Debug.Log($"服务器地址: {serverAddress}");

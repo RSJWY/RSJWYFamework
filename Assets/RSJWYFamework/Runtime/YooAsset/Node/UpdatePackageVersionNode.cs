@@ -51,9 +51,9 @@ namespace RSJWYFamework.Runtime
             }
         }
         
-        public override async UniTask OnLeave(StateNodeBase nextProcedureBase, bool isRestarting = false)
+        public override async UniTask OnLeave(StateNodeBase nextProcedureBase)
         {
-            await base.OnLeave(nextProcedureBase, isRestarting);
+            await base.OnLeave(nextProcedureBase);
         }
     }
 }

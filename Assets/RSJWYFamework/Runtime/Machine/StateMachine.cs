@@ -52,9 +52,9 @@ namespace RSJWYFamework.Runtime
         public event Action<StateNodeBase, StateNodeBase> ProcedureSwitchEvent;
         
         /// <summary>
-        /// 状态机结束事件（状态机实例、终止原因、状态码、是否重启）
+        /// 状态机结束事件（状态机实例、终止原因、状态码）
         /// </summary>
-        public event Action<StateMachine, string, int,bool> StateMachineTerminatedEvent;
+        public event Action<StateMachine, string, int> StateMachineTerminatedEvent;
         
         /// <summary>
         /// 状态机重启事件（状态机实例、重启原因、重启前的节点、重启后的节点类型、状态码）
@@ -362,7 +362,7 @@ namespace RSJWYFamework.Runtime
             var lastProcedure = _currentProcedureBase;
             
             if (lastProcedure != null)
-                await lastProcedure.OnLeave(nextProcedure, false);
+                await lastProcedure.OnLeave(nextProcedure);
             
             _currentProcedureBase = nextProcedure;
             await nextProcedure.OnEnter(lastProcedure);
@@ -378,7 +378,7 @@ namespace RSJWYFamework.Runtime
             {
                 try 
                 {
-                    await _currentProcedureBase.OnLeave(null, false);
+                    await _currentProcedureBase.OnLeave(null);
                 }
                 catch (Exception ex)
                 {
@@ -389,7 +389,7 @@ namespace RSJWYFamework.Runtime
 
             IsTerminated = true;
             StatusCode = statusCode;
-            StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode, false);
+            StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode);
         }
 
         private async UniTask ExecuteRestartAsync(Type startNodeType, string reason, int statusCode)
@@ -398,7 +398,7 @@ namespace RSJWYFamework.Runtime
             {
                 if (_currentProcedureBase != null)
                 {
-                    try { await _currentProcedureBase.OnLeave(null, true); }
+                    try { await _currentProcedureBase.OnLeave(null); }
                     catch (Exception ex) { AppLogger.Error($"状态机 {st_Name} 重启停止节点时出错：{ex.Message}"); }
                     _currentProcedureBase = null;
                 }

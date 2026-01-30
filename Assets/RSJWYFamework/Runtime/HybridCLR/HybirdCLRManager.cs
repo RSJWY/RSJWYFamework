@@ -9,31 +9,23 @@ namespace RSJWYFamework.Runtime
     [Module()]
     [ModuleDependency(typeof(YooAssetManager))][ModuleDependency(typeof(StateMachineManager))]
     [ModuleDependency(typeof(AppAsyncOperationSystem))][ModuleDependency(typeof(DataManager))]
-    [ModuleDependency(typeof(EventManager))][ModuleDependency(typeof(EventManager))]
+    [ModuleDependency(typeof(EventManager))]
     public class HybirdCLRManager:ModuleBase
     {
-        /// <summary>
-        /// 加载到的程序集
-        /// </summary>
-        private static Dictionary<string, Assembly> HotCode = new();
-        
         public async UniTask LoadHotCodeDLL()
         {
-            var op = new LoadHotCodeAsyncOperation(this);
+            var op = new LoadHotCodeAsyncOperation();
             await op.ToUniTask();
-            HotCode = op.HotCode;
         }
 
        
 
         public override void Initialize()
         {
-            HotCode.Clear();
         }
 
         public override void Shutdown()
         {
-            HotCode.Clear();
         }
 
         public override void LifeUpdate()

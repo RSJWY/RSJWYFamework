@@ -7,11 +7,10 @@ using HybridCLR;
 namespace RSJWYFamework.Runtime
 {
     /// <summary>
-    /// 加载DLL流程
+    /// 加载热更代码 Assembly 节点
     /// </summary>
-    public class LoadHotCodeNode : StateNodeBase
+    public class LoadHotCodeNode : StateNodeBase<LoadHotCodeAsyncOperation>
     {
-
         public override void OnInit()
         {
         }
@@ -22,80 +21,130 @@ namespace RSJWYFamework.Runtime
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            AppLogger.Log($"加载热更代码");
+            AppLogger.Log($"[LoadHotCodeNode] 开始装载程序集...");
             await LoadHotCode();
         }
 
-        async UniTask LoadHotCode()
+        private async UniTask LoadHotCode()
         {
-             await UniTask.WaitForSeconds(0.5f);
-                //获取数据
-                var _loadLis = (HotCodeDLL)_sm.GetBlackboardValue("LoadList");
-                var _DllDic = (Dictionary<string, HotCodeBytes>)_sm.GetBlackboardValue("HotcodeDic");
-                var MFAOTbytesMap= (Dictionary<string, byte[]>)_sm.GetBlackboardValue("MFAOTDic");
-                Dictionary<string, Assembly> hotCode = new();
+            // 从黑板获取数据
+            var hotCodeList = (HotCodeDLL)_sm.GetBlackboardValue("LoadList");
+            var hotCodeBytesMap = (Dictionary<string, HotCodeBytes>)_sm.GetBlackboardValue("HotcodeDic");
+            var aotMetadataMap = (Dictionary<string, byte[]>)_sm.GetBlackboardValue("MFAOTDic");
+            
+            Dictionary<string, Assembly> loadedAssemblies = new();
 
-                await UniTask.SwitchToThreadPool();
-                //加载到对应位置
-                //加载补充元数据
-                string _str_err_name = "";
-                try
+            // 注意：HybridCLR 的元数据加载和 Assembly 加载建议在主线程进行，避免潜在的线程安全问题
+            
+            string currentProcessingAssembly = "";
+
+            try
+            {
+                // 1. 加载 AOT 补充元数据
+                // 注意，补充元数据是给AOT dll补充元数据，而不是给热更新dll补充元数据。
+                // 热更新dll不缺元数据，不需要补充。
+                HomologousImageMode mode = HomologousImageMode.SuperSet;
+                
+                foreach (string aotDllName in hotCodeList.MetadataForAOTAssemblies)
                 {
-                    // 注意，补充元数据是给AOT dll补充元数据，而不是给热更新dll补充元数据。
-                    // 热更新dll不缺元数据，不需要补充，如果调用LoadMetadataForAOTAssembly会返回错误
-                    HomologousImageMode mode = HomologousImageMode.SuperSet;
-                    foreach (string aotDllName in _loadLis.MetadataForAOTAssemblies)
+                    currentProcessingAssembly = aotDllName;
+                    
+                    if (aotMetadataMap.TryGetValue(aotDllName, out byte[] dllBytes))
                     {
-                        _str_err_name = aotDllName;
-                        byte[] dllBytes = MFAOTbytesMap[aotDllName];
-                        // 加载assembly对应的dll，会自动为它hook。一旦aot泛型函数的native函数不存在，用解释器版本代码
+                        // 加载assembly对应的dll，会自动为它hook
                         LoadImageErrorCode err = RuntimeApi.LoadMetadataForAOTAssembly(dllBytes, mode);
                         if (err != LoadImageErrorCode.OK)
                         {
-                            AppLogger.Error($"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，HCLR错误码{err.ToString()}");
+                            AppLogger.Error($"[LoadHotCodeNode] 加载补充元数据失败: {currentProcessingAssembly}, 错误码: {err}");
+                        }
+                        else
+                        {
+                            AppLogger.Log($"[LoadHotCodeNode] 成功加载AOT补充元数据: {currentProcessingAssembly}");
                         }
                     }
+                    else
+                    {
+                         AppLogger.Warning($"[LoadHotCodeNode] 缺失AOT元数据字节流: {currentProcessingAssembly}");
+                    }
                 }
-                catch (System.Exception ex)
-                {
-                    _sm.Stop(500,$"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
-                    throw new AppException($"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
-                }
+            }
+            catch (System.Exception ex)
+            {
+                string errorMsg = $"[LoadHotCodeNode] 加载补充元数据时发生异常: {currentProcessingAssembly}, 详情: {ex}";
+                AppLogger.Error(errorMsg);
+                _sm.Stop(500, errorMsg);
+                throw new AppException(errorMsg);
+            }
 
-                //加载热更代码，注意加载顺序
-                try
-                {
+            // 2. 加载热更 DLL
+            try
+            {
 #if UNITY_EDITOR
-                    foreach (var _hotAss in _loadLis.HotCode)
-                    {
-                        _str_err_name = _hotAss;
-                        hotCode.Add(_hotAss,
-                            System.AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == _hotAss));
-                    }
-#else
-                    foreach (var _hotAss in _loadLis.HotCode)
-                    {
-
-                        _str_err_name = _hotAss;
-                        var _dll = _DllDic[_hotAss];
-                        
-                        if (_dll.pdbBytes!=null)
-                            hotCode.Add(_hotAss, Assembly.Load(_dll.dllBytes,_dll.pdbBytes));
-                        else
-                            hotCode.Add(_hotAss, Assembly.Load(_dll.dllBytes));
-                    }
-#endif
-                }
-                catch (System.Exception ex)
+                // 编辑器模式下，直接从 CurrentDomain 获取已加载的 Assembly
+                var currentAssemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                foreach (var hotAssetName in hotCodeList.HotCode)
                 {
-                    _sm.Stop(500,$"热更加载DLL流程，加载补充元：{_str_err_name} 时发生异常，{ex}");
-                    throw new AppException($"热更加载DLL流程，加载热更：{_str_err_name} 时发生异常，{ex}");
+                    currentProcessingAssembly = hotAssetName;
+                    var assembly = currentAssemblies.FirstOrDefault(a => a.GetName().Name == hotAssetName);
+                    
+                    if (assembly != null)
+                    {
+                        loadedAssemblies.Add(hotAssetName, assembly);
+                        AppLogger.Log($"[LoadHotCodeNode] (Editor) 已获取热更程序集: {hotAssetName}");
+                    }
+                    else
+                    {
+                        AppLogger.Warning($"[LoadHotCodeNode] (Editor) 无法在 CurrentDomain 找到程序集: {hotAssetName}");
+                    }
                 }
-                await UniTask.SwitchToMainThread();
-                _DllDic.Clear();
-                _sm.SetBlackboardValue("HotCodeAssembly",hotCode);
-                _sm.SwitchNode<LoadHotCodeDoneNode>();
-        }
+#else
+                // 真机模式下，使用 Assembly.Load 加载字节流
+                foreach (var hotAssetName in hotCodeList.HotCode)
+                {
+                    currentProcessingAssembly = hotAssetName;
+                    
+                    if (hotCodeBytesMap.TryGetValue(hotAssetName, out var bytesData))
+                    {
+                        Assembly assembly;
+                        if (bytesData.pdbBytes != null && bytesData.pdbBytes.Length > 0)
+                        {
+                            assembly = Assembly.Load(bytesData.dllBytes, bytesData.pdbBytes);
+                        }
+                        else
+                        {
+                            assembly = Assembly.Load(bytesData.dllBytes);
+                        }
+                        
+                        loadedAssemblies.Add(hotAssetName, assembly);
+                        AppLogger.Log($"[LoadHotCodeNode] 已加载热更程序集: {hotAssetName}");
+                    }
+                    else
+                    {
+                        AppLogger.Error($"[LoadHotCodeNode] 缺失热更DLL字节流: {hotAssetName}");
+                    }
+                }
+#endif
+            }
+            catch (System.Exception ex)
+            {
+                string errorMsg = $"[LoadHotCodeNode] 加载热更程序集时发生异常: {currentProcessingAssembly}, 详情: {ex}";
+                AppLogger.Error(errorMsg);
+                _sm.Stop(500, errorMsg);
+                throw new AppException(errorMsg);
+            }
 
+            // 清理缓存的字节流，释放内存
+            hotCodeBytesMap.Clear();
+            aotMetadataMap.Clear();
+            
+            // 将加载好的 Assembly 存入黑板 (如果后续流程需要) 或者直接存入 Manager
+            _sm.SetBlackboardValue("HotCodeAssembly", loadedAssemblies);
+            
+            // 切换到完成节点
+            _sm.SwitchNode<LoadHotCodeDoneNode>();
+            
+            // 保持 await 语义
+            await UniTask.Yield();
+        }
     }
 }
