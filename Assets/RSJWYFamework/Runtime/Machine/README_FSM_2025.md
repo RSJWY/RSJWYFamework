@@ -139,7 +139,7 @@ public class PlayerLoadingState : StateNodeBase<PlayerController>
 | **`StartNode<T>()`** | 启动状态机，并立即进入指定的状态 `T`。 |
 | **`SwitchNode<T>()`** | **[Async]** 切换到状态 `T`。自动加入队列，等待当前状态生命周期完成后执行。 |
 | **`Stop(code, reason)`** | **[Async]** 停止状态机。请求加入队列，安全停止。 |
-| **`Restart(Type, reason)`** | **[Async]** 重启状态机。请求加入队列，安全重启。 |
+
 | **`IsPaused`** | **[New]** 布尔属性。设为 `true` 暂停 Update，设为 `false` 恢复。 |
 | **`IsTerminated`** | 属性。返回状态机是否已完全停止（Stop 后为 true）。 |
 | **`Owner`** | 获取状态机的持有者。**泛型版返回 `T` 类型**，无需强转。 |

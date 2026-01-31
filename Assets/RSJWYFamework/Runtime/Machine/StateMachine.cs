@@ -8,7 +8,7 @@ namespace RSJWYFamework.Runtime
     {
         private struct StateChangeRequest
         {
-            public enum RequestType { Switch, Stop, Restart }
+            public enum RequestType { Switch, Stop }
             public RequestType Type;
             public Type TargetNodeType;
             public int StatusCode;
@@ -55,11 +55,6 @@ namespace RSJWYFamework.Runtime
         /// 状态机结束事件（状态机实例、终止原因、状态码）
         /// </summary>
         public event Action<StateMachine, string, int> StateMachineTerminatedEvent;
-        
-        /// <summary>
-        /// 状态机重启事件（状态机实例、重启原因、重启前的节点、重启后的节点类型、状态码）
-        /// </summary>
-        public event Action<StateMachine, string, StateNodeBase, Type, int> StateMachineRestartEvent;
         
         /// <summary>
         /// 黑板数据
@@ -334,9 +329,7 @@ namespace RSJWYFamework.Runtime
                             case StateChangeRequest.RequestType.Stop:
                                 await ExecuteStopAsync(req.StatusCode, req.Reason);
                                 break;
-                            case StateChangeRequest.RequestType.Restart:
-                                await ExecuteRestartAsync(req.TargetNodeType, req.Reason, req.StatusCode);
-                                break;
+
                         }
                     }
                     catch (Exception ex)
@@ -392,27 +385,7 @@ namespace RSJWYFamework.Runtime
             StateMachineTerminatedEvent?.Invoke(this, reason, StatusCode);
         }
 
-        private async UniTask ExecuteRestartAsync(Type startNodeType, string reason, int statusCode)
-        {
-            if (!IsTerminated)
-            {
-                if (_currentProcedureBase != null)
-                {
-                    try { await _currentProcedureBase.OnLeave(null); }
-                    catch (Exception ex) { AppLogger.Error($"状态机 {st_Name} 重启停止节点时出错：{ex.Message}"); }
-                    _currentProcedureBase = null;
-                }
-            }
 
-            IsTerminated = false;
-            IsPaused = false;
-            StatusCode = statusCode;
-            _pendingSwitchType = null;
-            StateMachineRestartEvent?.Invoke(this, reason, null, startNodeType, statusCode);
-
-            if (startNodeType != null) StartNode(startNodeType);
-            else StartNode();
-        }
         /// <summary>
         /// 切换到下一节点，
         /// 如果当前是最后一个节点，则切换到第一个节点
@@ -617,23 +590,6 @@ namespace RSJWYFamework.Runtime
         /// 暂停状态机
         /// </summary>
         public bool IsPaused { get; set; } = false;
-
-        /// <summary>
-        /// 重启状态机 (Async Queue)
-        /// </summary>
-        /// <param name="startNodeType">启动节点类型，null则使用默认</param>
-        /// <param name="reason">重启原因</param>
-        /// <param name="statusCode">状态码</param>
-        public void Restart(Type startNodeType = null, string reason = "Restart", int statusCode = 0)
-        {
-            _requestQueue.Enqueue(new StateChangeRequest {
-                Type = StateChangeRequest.RequestType.Restart,
-                TargetNodeType = startNodeType,
-                StatusCode = statusCode,
-                Reason = reason
-            });
-            ProcessQueue().Forget();
-        }
         
         #endregion
 

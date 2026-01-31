@@ -105,3 +105,8 @@ InitTestScene*.unity*
 .idea/.idea.RSJWYFamework/.idea/MarsCodeWorkspaceAppSettings.xml
 .idea/.idea.RSJWYFamework/.idea/MarsCodeWorkspaceAppSettings.xml
 .idea/.idea.RSJWYFamework/.idea/MarsCodeWorkspaceAppSettings.xml
+.idea/indexLayout.xml
+.idea/projectSettingsUpdater.xml
+.idea/vcs.xml
+.idea/workspace.xml
+Assets/StreamingAssets/Logs.meta
