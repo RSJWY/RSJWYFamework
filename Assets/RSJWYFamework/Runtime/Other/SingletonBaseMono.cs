@@ -2,74 +2,71 @@ using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
-    
-    public abstract class SingletonBaseMono<T>:MonoBehaviour where T : SingletonBaseMono<T>
+    [DisallowMultipleComponent]
+    public abstract class SingletonBaseMono<T> : MonoBehaviour where T : SingletonBaseMono<T>
     {
         private static T _instance;
         private static bool _applicationIsQuitting = false;
-        private static readonly object _lock = new object();
-        
+
+        /// <summary>
+        /// 是否为全局单例（默认为 true）
+        /// 如果为 true，则会自动调用 DontDestroyOnLoad
+        /// </summary>
+        protected virtual bool IsGlobal => true;
+
+        /// <summary>
+        /// 初始化方法，在 Awake 中初始化单例后调用
+        /// 请在子类重写此方法替代 Awake 进行初始化
+        /// </summary>
+        protected virtual void OnInitialize() { }
+
         public static T Instance
         {
             get
             {
                 if (_applicationIsQuitting)
                 {
-                    Debug.LogWarning($"[{typeof(T)}] 实例在应用程序退出时被访问，返回null");
+                    // 避免在退出时创建新的单例导致报错
                     return null;
                 }
-                
-                if (_instance != null) return _instance;
-                _instance = FindFirstObjectByType<T>();
+
                 if (_instance == null)
                 {
-                    GameObject singletonObject = new GameObject(typeof(T).ToString() + " [SingletonMono]");
-                    _instance = singletonObject.AddComponent<T>();
-                    // 确保单例在场景加载时不被销毁
-                    DontDestroyOnLoad(singletonObject);
+                    // 优先在场景中查找现有实例 (Unity 2023+ 推荐 API)
+                    _instance = FindFirstObjectByType<T>();
+                    
+                    if (_instance == null)
+                    {
+                        // 如果场景中不存在，则自动创建一个新的
+                        GameObject singletonObject = new GameObject(typeof(T).ToString() + " [Singleton]");
+                        _instance = singletonObject.AddComponent<T>();
+                    }
                 }
-#if UNITY_EDITOR
-                CheckThreadID();
-#endif
-               
                 return _instance;
             }
         }
 
-        #if UNITY_EDITOR
-        /// <summary>
-        /// 主线程ID
-        /// </summary>
-        private static int _mainThreadId=1;
-        private static int _nowThreadId;
-        
-        private static void CheckThreadID()
-        {
-            _nowThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            if (_mainThreadId!=_nowThreadId)
-            {
-                Debug.LogWarning($"警告！！您正在通过非Unity主线程访问单例！！请注意线程安全！");
-            }
-        }
-
-        #endif
         protected virtual void Awake()
         {
             if (_instance != null && _instance != this)
             {
-                Debug.LogWarning($"[{typeof(T)}] 发现多个实例，销毁多余的实例");
+                // 如果已经存在实例，销毁当前的重复对象，保证单例唯一性
                 Destroy(gameObject);
+                return;
             }
-            else
+            
+            _instance = (T)this;
+            
+            // 如果是全局单例且是根节点，则设置为不销毁
+            if (IsGlobal && transform.parent == null)
             {
-                _instance = (T)this;
                 DontDestroyOnLoad(gameObject);
             }
-#if UNITY_EDITOR
-            //记录主线程ID
-            _mainThreadId= System.Threading.Thread.CurrentThread.ManagedThreadId;
-#endif
+            
+            // 执行子类初始化逻辑
+            OnInitialize();
         }
+
         protected virtual void OnApplicationQuit()
         {
             _applicationIsQuitting = true;
