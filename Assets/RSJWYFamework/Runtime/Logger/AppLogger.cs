@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
@@ -27,39 +27,39 @@ namespace RSJWYFamework.Runtime
         }
 
         [HideInCallstack]
-        public static void Log(string info)
+        public static void Log(string info, Object context = null)
         {
             if (!Enabled(LogLevel.Log)) return;
-            Debug.Log(info);
+            Debug.Log(info, context);
         }
 
         /// <summary>
         /// 警告
         /// </summary>
         [HideInCallstack]
-        public static void Warning(string info)
+        public static void Warning(string info, Object context = null)
         {
             if (!Enabled(LogLevel.Warning)) return;
-            Debug.LogWarning(info);
+            Debug.LogWarning(info, context);
         }
         /// <summary>
         /// 错误
         /// </summary>
         [HideInCallstack]
-        public static void Error(string info)
+        public static void Error(string info, Object context = null)
         {
             if (!Enabled(LogLevel.Error)) return;
-            Debug.LogError(info);
+            Debug.LogError(info, context);
         }
 
         /// <summary>
         /// 异常
         /// </summary>
         [HideInCallstack]
-        public static void Exception(System.Exception exception)
+        public static void Exception(System.Exception exception, Object context = null)
         {
             if (!Enabled(LogLevel.Exception)) return;
-            Debug.LogException(exception);
+            Debug.LogException(exception, context);
         }
     }
 }

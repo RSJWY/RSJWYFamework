@@ -101,7 +101,7 @@ namespace RSJWYFamework.Runtime
         
         public override void Initialize()
         {
-            AppConfig = ModuleManager.GetModule<DataManager>().GetFirstDataSB<AppConfig>();
+            AppConfig = ModuleManager.GetModule<DataManager>().GetFirstData<AppConfig>();
             if (AppConfig != null)return;
             AppConfig=Resources.Load<AppConfig>("AppConfig");
             if (AppConfig == null)
@@ -109,7 +109,7 @@ namespace RSJWYFamework.Runtime
                 Debug.LogError("AppConfig is null,请在Resources文件夹下创建AppConfig");
                 return;
             }
-            ModuleManager.GetModule<DataManager>().AddDataSB(AppConfig);
+            ModuleManager.GetModule<DataManager>().AddData(AppConfig);
 
             // =========================================================
             // 小码酱添加：尝试加载外部 AppConfig.json 覆盖默认配置

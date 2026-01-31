@@ -21,7 +21,7 @@ namespace RSJWYFamework.Runtime
         public async UniTask LoadPackage()
         {
             //获取数据并存入数据
-            var projectConfig = ModuleManager.GetModule<DataManager>().GetFirstDataSB<AppConfig>();
+            var projectConfig = ModuleManager.GetModule<DataManager>().GetFirstData<AppConfig>();
             Utility.YooAsset.Setting(
                 hostServerIP: projectConfig.hostServerIP, 
                 projectName: projectConfig.ProjectName, 

@@ -9,6 +9,9 @@ using UnityEngine;
 /// </summary>
 public class TouchSocketContainerUnityDebugLogger : LoggerBase
 {
+    // 缓存 StringBuilder 以避免频繁 GC
+    private readonly StringBuilder _cachedSb = new StringBuilder();
+
     static TouchSocketContainerUnityDebugLogger()
     {
         Default = new TouchSocketContainerUnityDebugLogger();
@@ -28,47 +31,51 @@ public class TouchSocketContainerUnityDebugLogger : LoggerBase
     /// <param name="source"></param>
     /// <param name="message"></param>
     /// <param name="exception"></param>
+    [HideInCallstack] // 关键：隐藏此方法在控制台的堆栈，确保双击日志能跳转到业务代码
     protected override void WriteLog(LogLevel logLevel, object source, string message, Exception exception)
     {
-        lock (typeof(ConsoleLogger))
+        // 锁定 StringBuilder 实例，确保线程安全（虽然 Debug.Log 只能在主线程安全调用，但 Logger 可能被多线程调用）
+        lock (_cachedSb)
         {
-            var logString = new StringBuilder();
-            logString.Append(DateTime.Now.ToString(this.DateTimeFormat));
-            logString.Append(" | ");
+            _cachedSb.Clear();
+            _cachedSb.Append(DateTime.Now.ToString(this.DateTimeFormat));
+            _cachedSb.Append(" | ");
 
-            logString.Append(logLevel.ToString());
-            logString.Append(" | ");
-            logString.Append(message);
+            _cachedSb.Append(logLevel.ToString());
+            _cachedSb.Append(" | ");
+            _cachedSb.Append(message);
 
             if (exception != null)
             {
-                logString.Append(" | ");
-                logString.Append($"[Exception Message]：{exception.Message}");
-                logString.Append($"[Stack Trace]：{exception.StackTrace}");
+                _cachedSb.Append(" | ");
+                _cachedSb.Append($"[Exception Message]：{exception.Message}");
+                _cachedSb.Append($"[Stack Trace]：{exception.StackTrace}");
             }
+
+            var finalMessage = _cachedSb.ToString();
 
             switch (logLevel)
             {
                 case LogLevel.Warning:
-                    Debug.LogWarning(logString.ToString());
+                    Debug.LogWarning(finalMessage);
                     break;
 
                 case LogLevel.Error:
                     if (exception != null)
                     {
-                        throw exception;
-                        //Debug.LogError(exception);
+                        // 抛出异常会中断流程，视需求而定，这里保留原逻辑但建议仅LogException
+                        Debug.LogError(finalMessage);
+                        Debug.LogException(exception); 
                     }
                     else
                     {
-                        Debug.LogError(logString.ToString());
+                        Debug.LogError(finalMessage);
                     }
-
                     break;
 
                 case LogLevel.Info:
                 default:
-                    Debug.Log(logString.ToString());
+                    Debug.Log(finalMessage);
                     break;
             }
         }

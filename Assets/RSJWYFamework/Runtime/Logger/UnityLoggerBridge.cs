@@ -21,7 +21,20 @@ public static class UnityLoggerBridge
     public static int MaxFileSize { get; set; } = 1024 * 1024; // 1MB
     public static LogLevel LogLevel { get; set; } = LogLevel.Trace;
     public static int MaxLogRetentionDays { get; set; } = 3; // 日志保留天数
-    
+
+    /// <summary>
+    /// 初始化入口
+    /// </summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+    private static void InitializeLogger()
+    {
+        Init();
+        // 注册退出事件，替代 OnApplicationQuit
+        Application.quitting -= Shutdown;
+        Application.quitting += Shutdown;
+        
+        AppLogger.Log("初始化日志记录器");
+    }
 
     /// <summary>
     /// 手动初始化（若需要延迟初始化）
@@ -32,7 +45,6 @@ public static class UnityLoggerBridge
 
         try
         {
-            
             // 清理过期日志
             CleanUpOldLogs();
 
@@ -46,18 +58,19 @@ public static class UnityLoggerBridge
 
             // 注册Unity日志回调
             Application.logMessageReceivedThreaded += HandleUnityLog;
+            
             // 注册Task异常回调，捕获异步任务中的漏网之鱼，守护最后一道防线。
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
                 Debug.LogError($"捕获到Task任务中未处理的异常信息：{e.Exception}");
                 e.SetObserved(); // 标记异常已处理，避免程序崩溃
             };
-            UniTaskScheduler.UnobservedTaskException+=(e) =>
+            UniTaskScheduler.UnobservedTaskException += (e) =>
             {
                 Debug.LogError($"捕获到UniTask任务中未处理的异常信息：{e}");
             };
+            
             _isInitialized = true;
-            CleanupOldLogFolders();
             Debug.Log($"[UnityLoggerBridge] 初始化成功，日志路径：{Application.streamingAssetsPath}/{LogDirectory}");
         }
         catch (Exception e)
@@ -66,31 +79,35 @@ public static class UnityLoggerBridge
         }
     }
 
-    private static void CleanupOldLogFolders()
+    /// <summary>
+    /// 合并后的清理逻辑：删除过期的日期目录
+    /// </summary>
+    private static void CleanUpOldLogs()
     {
         try
         {
-            var basePath = $"{Application.streamingAssetsPath}/{LogDirectory}";
-            if (!Directory.Exists(basePath))
-            {
-                return;
-            }
-            var thresholdDate = DateTime.Now.AddMonths(-1).Date;
+            var basePath = Path.Combine(Application.streamingAssetsPath, LogDirectory);
+            if (!Directory.Exists(basePath)) return;
+
+            var thresholdDate = DateTime.Now.Date.AddDays(-MaxLogRetentionDays);
+            
+            // 使用 EnumerateDirectories 减少内存分配
             foreach (var dir in Directory.EnumerateDirectories(basePath))
             {
-                var name = Path.GetFileName(dir);
-                if (DateTime.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dirDate))
+                var dirName = Path.GetFileName(dir);
+                // 尝试解析目录名为日期
+                if (DateTime.TryParseExact(dirName, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dirDate))
                 {
                     if (dirDate.Date < thresholdDate)
                     {
                         try
                         {
                             Directory.Delete(dir, true);
-                            Debug.Log($"[UnityLoggerBridge] 已删除过期日志目录：{name}");
+                            Debug.Log($"[UnityLoggerBridge] 已删除过期日志目录：{dirName}");
                         }
                         catch (Exception ex)
                         {
-                            Debug.LogWarning($"[UnityLoggerBridge] 删除日志目录失败：{name}，原因：{ex.Message}");
+                            Debug.LogWarning($"[UnityLoggerBridge] 删除日志目录失败：{dirName}，原因：{ex.Message}");
                         }
                     }
                 }
@@ -99,34 +116,6 @@ public static class UnityLoggerBridge
         catch (Exception e)
         {
             Debug.LogWarning($"[UnityLoggerBridge] 清理日志目录发生异常：{e.Message}");
-        }
-    }
-    private static void CleanUpOldLogs()
-    {
-        try
-        {
-            string rootPath = $"{Application.streamingAssetsPath}/{LogDirectory}";
-            if (!System.IO.Directory.Exists(rootPath)) return;
-
-            var directories = System.IO.Directory.GetDirectories(rootPath);
-            var now = DateTime.Now.Date;
-            
-            foreach (var dir in directories)
-            {
-                var dirName = System.IO.Path.GetFileName(dir);
-                if (DateTime.TryParse(dirName, out DateTime logDate))
-                {
-                    if ((now - logDate).TotalDays > MaxLogRetentionDays)
-                    {
-                        System.IO.Directory.Delete(dir, true);
-                        Debug.Log($"[UnityLoggerBridge] 已清理过期日志: {dirName}");
-                    }
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[UnityLoggerBridge] 清理日志失败: {e.Message}");
         }
     }
 
@@ -156,43 +145,12 @@ public static class UnityLoggerBridge
         if (!_isInitialized) return;
 
         Application.logMessageReceivedThreaded -= HandleUnityLog;
+        Application.quitting -= Shutdown;
+        
         _fileLogger?.Dispose();
         _fileLogger = null;
         _isInitialized = false;
 
         Debug.Log("[UnityLoggerBridge] 已清理资源");
-    }
-}
-
-/// <summary>
-/// 创建一个物体，保证unity退出时清理资源
-/// </summary>
-public class UnityLogToFileServer : MonoBehaviour
-{
-    /// <summary>
-    /// 仅有部分代码在本时机可用。
-    /// </summary>
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
-    private static void InitializeLogger()
-    {
-        UnityLoggerBridge.Init();
-        AppLogger.Log("初始化日志记录器");
-    }
-
-    /// <summary>
-    /// 创建一个物体来借用unity生命周期，确保在unity退出时清理资源
-    /// </summary>
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void RegisterShutdown()
-    {
-        // 监听应用退出事件（需通过MonoBehaviour，因为纯C#类无法直接监听）
-        var obj = new GameObject("[UnityLogToFileServerHelper]");
-        obj.AddComponent<UnityLogToFileServer>();
-        DontDestroyOnLoad(obj);
-        AppLogger.Log("注册Unity生命周期");
-    }
-    private void OnApplicationQuit()
-    {
-        UnityLoggerBridge.Shutdown();
     }
 }

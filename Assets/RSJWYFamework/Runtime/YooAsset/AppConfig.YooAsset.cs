@@ -4,7 +4,7 @@ using YooAsset;
 
 namespace RSJWYFamework.Runtime
 {
-    public partial class AppConfig : DataBaseSB
+    public partial class AppConfig : ScriptableData
     {
         [FoldoutGroup("YooAssetInfo")] 
         public List<YooAssetPackageData> YooAssetPackageData=new List<YooAssetPackageData>();

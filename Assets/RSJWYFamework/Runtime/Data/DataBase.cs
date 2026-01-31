@@ -3,15 +3,14 @@ using UnityEngine;
 namespace RSJWYFamework.Runtime
 {
     /// <summary>
-    /// 这不是在骂人！！！！
-    /// 基于ScriptableObject的数据子类
+    /// 基于ScriptableObject的数据基类
     /// </summary>
-    public class DataBaseSB:ScriptableObject
+    public class ScriptableData : ScriptableObject
     {
         
     }
     /// <summary>
-    /// 这个是普通继承
+    /// 普通数据基类 (非Unity对象)
     /// </summary>
     public class DataBase
     {

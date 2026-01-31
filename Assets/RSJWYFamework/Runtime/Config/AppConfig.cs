@@ -8,7 +8,7 @@ namespace RSJWYFamework.Runtime
     /// 项目配置文件
     /// </summary>
     [CreateAssetMenu(fileName = "ProjectConfig", menuName = "RSJWYFamework/创建App配置文件", order = 0)]
-    public partial class AppConfig : DataBaseSB
+    public partial class AppConfig : ScriptableData
     {
         [LabelText("项目名称")] public string ProjectName = "测试工程";
         [LabelText("软件名")] public string APPName = "测试软件";
