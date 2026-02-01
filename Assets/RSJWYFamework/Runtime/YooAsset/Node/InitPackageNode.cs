@@ -91,7 +91,10 @@ namespace RSJWYFamework.Runtime
                 _sm.SwitchNode<UpdatePackageVersionNode>();
             }
         }
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         public override void OnClose()
         {
         }

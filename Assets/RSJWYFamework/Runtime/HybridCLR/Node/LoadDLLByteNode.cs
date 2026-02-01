@@ -11,18 +11,16 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public class LoadDLLByteNode : StateNodeBase<LoadHotCodeAsyncOperation>
     {
-        public override void OnInit()
-        {
-        }
-
-        public override void OnClose()
-        {
-        }
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log($"[LoadDLLByteNode] 开始加载热更代码数据...");
             await ExecuteTask();
+        }
+
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return  UniTask.CompletedTask;
         }
 
         private async UniTask ExecuteTask()

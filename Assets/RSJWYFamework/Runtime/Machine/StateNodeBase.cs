@@ -14,31 +14,25 @@ namespace RSJWYFamework.Runtime
         /// 流程初始化
         /// 添加流程时调用
         /// </summary>
-        public abstract void OnInit();
+        public virtual void OnInit(){}
         
         /// <summary>
         /// 流程关闭
         /// 移除流程时调用
         /// </summary>
-        public abstract void OnClose();
-        
+        public virtual void OnClose(){}
+
         /// <summary>
         /// 进入当前流程 (Async)
         /// </summary>
         /// <param name="lastProcedureBase">上一个离开的流程</param>
-        public virtual UniTask OnEnter(StateNodeBase lastProcedureBase)
-        {
-            return UniTask.CompletedTask;
-        }
+        public abstract UniTask OnEnter(StateNodeBase lastProcedureBase);
 
         /// <summary>
         /// 离开当前流程 (Async)
         /// </summary>
         /// <param name="nextProcedureBase">下一个进入的流程</param>
-        public virtual UniTask OnLeave(StateNodeBase nextProcedureBase)
-        {
-            return UniTask.CompletedTask;
-        }
+        public abstract UniTask OnLeave(StateNodeBase nextProcedureBase);
         #endregion 
         #region 虚方法
         /// <summary>

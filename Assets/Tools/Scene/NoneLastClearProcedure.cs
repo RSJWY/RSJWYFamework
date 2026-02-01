@@ -22,6 +22,10 @@ namespace RSJWYFamework.Runtime
         protected override async UniTask LoadTransitionContentEvent(StateNodeBase last)
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
+        } 
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
         }
     }
 
@@ -44,6 +48,10 @@ namespace RSJWYFamework.Runtime
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
     }
 
     public sealed class NoneSwitchToTransferSceneStateNode : SwitchToTransferSceneStateNode
@@ -63,6 +71,10 @@ namespace RSJWYFamework.Runtime
             var emptyScene = SceneManager.CreateScene("SwitchToTransferScene-Temporary");
             SceneManager.SetActiveScene(emptyScene);
             await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate);
+        }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
         }
     }
     
@@ -93,6 +105,10 @@ namespace RSJWYFamework.Runtime
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
     }
     /// <summary>
     /// 不需要预加载下一个场景数据
@@ -119,6 +135,10 @@ namespace RSJWYFamework.Runtime
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
     }
     /// <summary>
     /// 不需要初始化下一个场景
@@ -137,6 +157,10 @@ namespace RSJWYFamework.Runtime
         protected override async UniTask SceneInit(StateNodeBase lastProcedureBase)
         {
             await UniTask.Yield(PlayerLoopTiming.Update);
+        }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
         }
     }
 }

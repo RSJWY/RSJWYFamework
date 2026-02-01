@@ -10,14 +10,12 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public class CheckLocalAssetsVersionNode:StateNodeBase
     {
-        public override void OnInit()
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
         {
-            
+            return UniTask.CompletedTask;
         }
 
-        public override void OnClose()
-        {
-        }
+
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {

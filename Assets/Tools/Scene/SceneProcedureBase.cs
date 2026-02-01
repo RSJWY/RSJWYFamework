@@ -60,7 +60,10 @@ namespace RSJWYFamework.Runtime
             return UniTask.CompletedTask;
         }
 
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         public override void OnUpdate()
         {
             
@@ -264,7 +267,10 @@ namespace RSJWYFamework.Runtime
             _sm.Stop(0,"场景切换完成");
             return UniTask.CompletedTask;
         }
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
 
         public override void OnUpdate()
         {

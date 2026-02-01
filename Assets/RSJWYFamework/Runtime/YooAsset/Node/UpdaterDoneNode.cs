@@ -25,6 +25,10 @@ namespace RSJWYFamework.Runtime
             _sm.Stop(0,$"完成包{packageName}更新流程");
             return UniTask.CompletedTask;
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         
     }
 }

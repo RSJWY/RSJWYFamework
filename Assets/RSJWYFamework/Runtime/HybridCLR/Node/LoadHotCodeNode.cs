@@ -11,18 +11,16 @@ namespace RSJWYFamework.Runtime
     /// </summary>
     public class LoadHotCodeNode : StateNodeBase<LoadHotCodeAsyncOperation>
     {
-        public override void OnInit()
-        {
-        }
-
-        public override void OnClose()
-        {
-        }
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             AppLogger.Log($"[LoadHotCodeNode] 开始装载程序集...");
             await LoadHotCode();
+        }
+
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
         }
 
         private async UniTask LoadHotCode()

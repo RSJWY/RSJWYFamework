@@ -46,6 +46,12 @@ namespace RSJWYFamework.Runtime
             await operation.ToUniTask();
             _sm.SwitchNode<UpdaterDoneNode>();
         }
+
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
+
         private void Operation_Completed(YooAsset.AsyncOperationBase obj)
         {
            Owner.OnClearCacheFiles(obj);

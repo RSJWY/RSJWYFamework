@@ -16,7 +16,10 @@ namespace RSJWYFamework.Runtime
         public override void OnClose()
         {
         }
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         public override UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
             var packageName=(string)_sm.GetBlackboardValue("PackageName");

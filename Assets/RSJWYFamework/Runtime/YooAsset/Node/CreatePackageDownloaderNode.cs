@@ -43,5 +43,10 @@ namespace RSJWYFamework.Runtime
             }
             return UniTask.CompletedTask;
         }
+
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
     }
 }

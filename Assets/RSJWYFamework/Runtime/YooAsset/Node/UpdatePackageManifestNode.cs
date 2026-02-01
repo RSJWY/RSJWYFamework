@@ -21,6 +21,10 @@ namespace RSJWYFamework.Runtime
         {
            await UpdateManifest();
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         private async UniTask UpdateManifest() 
         {
             await UniTask.WaitForSeconds(0.5f);

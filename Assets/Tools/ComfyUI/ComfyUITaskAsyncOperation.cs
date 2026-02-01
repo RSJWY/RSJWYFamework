@@ -161,10 +161,12 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnUpdate()
         {
+            _smc?.OnUpdate();
         }
 
         protected override void OnSecondUpdate()
         {
+            _smc?.OnUpdateSecond();
         }
 
         protected override void OnAbort()
@@ -173,6 +175,7 @@ namespace RSJWYFamework.Runtime
 
         protected override void OnSecondUpdateUnScaleTime()
         {
+            _smc?.OnUpdateSecondUnScaleTime();
         }
 
 

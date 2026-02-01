@@ -18,10 +18,8 @@ namespace RSJWYFamework.Runtime
 
         public override async UniTask OnEnter(StateNodeBase lastProcedureBase)
         {
-            await base.OnEnter(lastProcedureBase);
             await UpdatePackageVersion();
         }
-        
         /// <summary>
         /// 更新包版本
         /// </summary>
@@ -51,9 +49,9 @@ namespace RSJWYFamework.Runtime
             }
         }
         
-        public override async UniTask OnLeave(StateNodeBase nextProcedureBase)
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
         {
-            await base.OnLeave(nextProcedureBase);
+            return UniTask.CompletedTask;
         }
     }
 }

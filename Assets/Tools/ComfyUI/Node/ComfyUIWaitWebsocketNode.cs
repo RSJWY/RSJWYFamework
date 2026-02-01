@@ -30,7 +30,10 @@ namespace RSJWYFamework.Runtime.Node
             //onnectComfyUI().Forget();
             return UniTask.CompletedTask;
         }
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         public override void OnUpdate()
         {
             // base.OnUpdate(); // StateNodeBase<T> might not have base logic for OnUpdate, usually abstract or virtual empty.

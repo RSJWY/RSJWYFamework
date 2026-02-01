@@ -23,7 +23,10 @@ namespace RSJWYFamework.Runtime.Node
         {
             await DownloadImageURL();
         }
-
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         private async UniTask DownloadImageURL()
         {
             var result=await GetHistoryImageURL();

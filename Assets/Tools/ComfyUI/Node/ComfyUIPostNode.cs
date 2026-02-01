@@ -49,6 +49,10 @@ namespace RSJWYFamework.Runtime.Node
             
             await PostJson();
         }
+        public override UniTask OnLeave(StateNodeBase nextProcedureBase)
+        {
+            return UniTask.CompletedTask;
+        }
         private async UniTask PostJson()
         {
             using (var httpClient = new HttpClient())
