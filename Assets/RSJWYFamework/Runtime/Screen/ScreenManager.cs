@@ -20,6 +20,8 @@ namespace RSJWYFamework.Runtime
             //Screen.SetResolution(screenJson.ScreenWid, screenJson.ScreenHei, false);
             
             CWinScreen.HandlerInit();
+            // Override with command line args if available
+            CWinScreen.InitCmdArgs();
             CWinScreen.SetWindsPos(CWinScreen.windowHandle, screenJson.ScreenX, screenJson.ScreenY, screenJson.ScreenWid, screenJson.ScreenHei);
             bool captureOnInit = screenJson.CaptureMouseOnInit;
             if (captureOnInit)
@@ -31,15 +33,6 @@ namespace RSJWYFamework.Runtime
         public override void LifeUpdate()
         {
             base.LifeUpdate();
-            if (Input.GetKeyDown(KeyCode.Tab))
-            {
-                SetMouseCapture(!isMouseCaptured);
-            }
-
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                Application.Quit();
-            }
         }
 
         public override void Shutdown()
