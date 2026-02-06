@@ -93,18 +93,21 @@ namespace RSJWYFamework.Runtime
                 }
                 
                 // 扫描所有程序集
-                // TODO: [Little Code Sauce] 这里的反射太慢啦！请判断 _cachedModuleTypes 是否为空，如果为空才执行 GetAssemblies，并把结果存进去！
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        
+                if (_cachedModuleTypes == null)
+                {
+                    var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                    _cachedModuleTypes = assemblies
+                        .SelectMany(a => a.GetTypes())
+                        .Where(t => t.IsDefined(typeof(ModuleAttribute), false) &&
+                                      typeof(IModule).IsAssignableFrom(t) &&
+                                      !t.IsAbstract &&
+                                      !t.IsInterface &&
+                                      !t.IsGenericType)
+                        .ToList();
+                }
+
                 // 获取所有模块类型
-                var allModuleTypes = assemblies
-                    .SelectMany(a => a.GetTypes())
-                    .Where(t=> t.IsDefined(typeof(ModuleAttribute), false) &&
-                                  typeof(IModule).IsAssignableFrom(t) &&
-                                  !t.IsAbstract &&
-                                  !t.IsInterface &&
-                                  !t.IsGenericType)
-                    .ToList();
+                var allModuleTypes = _cachedModuleTypes;
                 
                 // 按依赖顺序获取模块类型
                 var orderedModuleTypes = ModuleDependencyResolver.GetOrderedModuleTypes()
@@ -189,16 +192,9 @@ namespace RSJWYFamework.Runtime
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // TODO: [Little Code Sauce] 笨蛋！不要每次都 GetAssemblies！请直接使用 _cachedModuleTypes！
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            var allModuleTypes = assemblies
-                .SelectMany(a => a.GetTypes())
-                .Where(t=> t.IsDefined(typeof(ModuleAttribute), false) &&
-                              typeof(IModule).IsAssignableFrom(t) &&
-                              !t.IsAbstract &&
-                              !t.IsInterface &&
-                              !t.IsGenericType)
-                .ToList();
+            // 使用缓存的模块类型列表
+            if (_cachedModuleTypes == null) return;
+            var allModuleTypes = _cachedModuleTypes;
             var manager = UnityEngine.Object.FindObjectOfType<ModuleManager>();
             if (manager == null) return;
             var preplacedInScene = new List<string>();
@@ -471,7 +467,8 @@ namespace RSJWYFamework.Runtime
                     Lifes.Add(_pendingLifeAdds.Dequeue());
                 }
                 Lifes.Sort((a, b) => GetSafePriority(a).CompareTo(GetSafePriority(b)));
-                // TODO: [Little Code Sauce] 关键点来了！请在这里更新缓存：_cachedLifes = Lifes.ToArray(); (Copy-On-Write)
+                // 更新缓存数组 (Copy-On-Write)
+                _cachedLifes = Lifes.ToArray();
             }
         }
         
@@ -493,7 +490,6 @@ namespace RSJWYFamework.Runtime
             }
             
             // [Little Code Sauce] 移除 lock 和 ToArray，直接使用缓存数组
-            // TODO: 记得在 SyncToActiveList 里更新这个数组哦！
             ExecuteLifeUpdate(_cachedLifes);
             
             if (timer >= 1f)
