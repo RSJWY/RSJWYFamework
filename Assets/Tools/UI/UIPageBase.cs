@@ -1,4 +1,5 @@
 using System;
+using RSJWYFamework.Runtime.UI;
 using UnityEngine;
 
 namespace RSJWYFamework.Runtime
@@ -14,6 +15,11 @@ namespace RSJWYFamework.Runtime
         private CanvasGroup _canvasGroup;
         
         /// <summary>
+        /// 页面配置信息 (从 Attribute 读取)
+        /// </summary>
+        public UIWindowAttribute WindowConfig { get; private set; }
+
+        /// <summary>
         /// 页面名称（通常是 Prefab 名字）
         /// </summary>
         public string PageName { get; set; }
@@ -26,6 +32,18 @@ namespace RSJWYFamework.Runtime
         protected virtual void Awake()
         {
             _canvasGroup = GetComponent<CanvasGroup>();
+            
+            // 读取 Attribute 配置
+            var attr = GetType().GetCustomAttributes(typeof(UIWindowAttribute), true);
+            if (attr.Length > 0)
+            {
+                WindowConfig = attr[0] as UIWindowAttribute;
+            }
+            else
+            {
+                // 默认配置
+                WindowConfig = new UIWindowAttribute();
+            }
         }
 
         /// <summary>
