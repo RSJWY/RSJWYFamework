@@ -7,6 +7,7 @@ namespace RSJWYFamework.Runtime
    /// 圆角UI
    /// https://blog.csdn.net/q1242416158/article/details/134735046
    /// </summary>
+    [ExecuteAlways]
     public class UIRoundConor_RawImage : RawImage
     {
         const float defaultCorner = 4;
@@ -18,9 +19,9 @@ namespace RSJWYFamework.Runtime
         [SerializeField] [Tooltip("拐角数值")]  protected float m_Corner = defaultCorner;
  
         [Tooltip("中心颜色")] [SerializeField] 
-        protected Color m_CenterColor = Color.clear;
+        protected Color m_CenterColor = Color.white; // Default to white to multiply correctly
         [Tooltip("边缘线颜色")] [SerializeField][Range(0,255)]
-        protected float m_BorderWidth = 1;
+        protected float m_BorderWidth = 0;
         [Tooltip("边缘线颜色")] [SerializeField] 
         protected Color m_BorderColor = Color.black;
         
@@ -31,6 +32,8 @@ namespace RSJWYFamework.Runtime
         private static readonly int BorderColorID = Shader.PropertyToID("_BorderColor");
         private static readonly int WidthID = Shader.PropertyToID("_Width");
         private static readonly int HeightID = Shader.PropertyToID("_Height");
+
+        private Material m_InstanceMaterial;
         
         /// <summary>
         /// 角点
@@ -95,34 +98,63 @@ namespace RSJWYFamework.Runtime
         protected override void Awake()
         {
             base.Awake();
-            if (s_defaultShader == null) s_defaultShader = Shader.Find("Custom/UI/RoundConor");
-            material = new Material(s_defaultShader);
-            SetMaterial();
+            RefreshMaterial();
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            RefreshMaterial();
         }
  
 #if UNITY_EDITOR
         protected override void OnValidate()
         {
             base.OnValidate();
-            SetMaterial();
+            RefreshMaterial();
         }
 #endif
         protected override void OnRectTransformDimensionsChange()
         {
            base.OnRectTransformDimensionsChange();
-           SetMaterial();
+           UpdateMaterial();
         }
+
+        private void RefreshMaterial()
+        {
+            if (s_defaultShader == null) s_defaultShader = Shader.Find("Custom/OneSidedSprite");
+            
+            if (m_InstanceMaterial == null || m_InstanceMaterial.shader != s_defaultShader)
+            {
+                m_InstanceMaterial = new Material(s_defaultShader);
+                m_InstanceMaterial.hideFlags = HideFlags.HideAndDontSave;
+            }
+            
+            this.material = m_InstanceMaterial;
+            UpdateMaterial();
+        }
+
+        protected void UpdateMaterial()
+        {
+            if (this.material == null) return;
+            
+            // Ensure we are setting properties on the material instance we own
+            if (m_InstanceMaterial == null) return;
+
+            m_InstanceMaterial.SetVector(RoundedCornerID, Corner4);
+            m_InstanceMaterial.SetVector(Color1, m_CenterColor);
+            m_InstanceMaterial.SetFloat(BorderWidthID, m_BorderWidth);
+            m_InstanceMaterial.SetColor(BorderColorID, m_BorderColor);
+            m_InstanceMaterial.SetFloat(WidthID, rectTransform.rect.size.x); // Local scale handled in shader usually via UV or vertex pos, but here passing size
+            m_InstanceMaterial.SetFloat(HeightID, rectTransform.rect.size.y);
+        }
+        
         protected void SetMaterial()
         {
-            var material1 = new Material(material);
-            material1.SetVector(RoundedCornerID, Corner4);
-            material1.SetVector(Color1, m_CenterColor);
-            material1.SetFloat(BorderWidthID, m_BorderWidth);
-            material1.SetColor(BorderColorID, m_BorderColor);
-            material1.SetFloat(WidthID, rectTransform.rect.size.x*transform.localScale.x);
-            material1.SetFloat(HeightID, rectTransform.rect.size.y*transform.localScale.y);
-            material = material1;
+            // Compatibility method if needed, but redirects to UpdateMaterial
+            RefreshMaterial();
         }
+
  
         /// <summary>
         /// 设置点击区域,圆角区域不可被点击
@@ -184,11 +216,11 @@ namespace RSJWYFamework.Runtime
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            if (material != null)
+            if (m_InstanceMaterial != null)
             {
-                var m = material;
-                material = null;
-                Destroy(m);
+                if (Application.isPlaying) Destroy(m_InstanceMaterial);
+                else DestroyImmediate(m_InstanceMaterial);
+                m_InstanceMaterial = null;
             }
         }
     }
