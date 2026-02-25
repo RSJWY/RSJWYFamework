@@ -75,21 +75,7 @@ namespace RSJWYFamework.Runtime
             /// <returns></returns>
             public static string GetHostServerURL(string packageName)
             {
-#if UNITY_EDITOR
-                if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.Android)
-                    return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/Android/{packageName}";
-                else if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.iOS)
-                    return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/IPhone/{packageName}";
-                else
-                    return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/PC/{packageName}";
-#else
-        if (Application.platform == RuntimePlatform.Android)
-            return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/Android/{packageName}";
-        else if (Application.platform == RuntimePlatform.IPhonePlayer)
-            return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/IPhone/{packageName}";
-        else
-            return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/PC/{packageName}";
-#endif
+                return $"{HostServerIP}/{ProjectName}/{AppName}/{AppVersion}/{packageName}";
             }
 
             /// <summary>
