@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using RSJWYFamework.Runtime;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
@@ -12,50 +13,38 @@ namespace RSJWYFamework.Editor
 {
     public class YooAssetToolWindows : OdinEditorWindow
     {
-        [ReadOnly]
-        [LabelText("配置文件")]
-        public AppConfig appConfig;
-        
-        [LabelText("包列表数据")]
-        [BoxGroup("包列表")]
-        [ShowInInspector]
-        public List<YooAssetPackageDataEditor> packageDataList=new ();
+        [ReadOnly] [LabelText("配置文件")] public AppConfig appConfig;
 
-        [LabelText("构建输出的根目录")]
-        [ReadOnly] 
-        public string buildoutputRoot;
-        [LabelText("内置文件的根目录")]
-        [ReadOnly]
-        public string streamingAssetsRoot;
+        [LabelText("包列表数据")] [BoxGroup("包列表")] [ShowInInspector]
+        public List<YooAssetPackageDataEditor> packageDataList = new();
 
-        [LabelText("包版本")] public EditorPrefString PackageVersion = 
-            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.PackageVersion","test");
-        
-        [LabelText("构建目标平台")]
-        public BuildTarget buildTarget = BuildTarget.StandaloneWindows64;
+        [LabelText("构建输出的根目录")] [ReadOnly] public string buildoutputRoot;
+        [LabelText("内置文件的根目录")] [ReadOnly] public string streamingAssetsRoot;
+
+        [LabelText("包版本")] public EditorPrefString PackageVersion =
+            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.PackageVersion", "test");
+
+        [LabelText("构建目标平台")] public BuildTarget buildTarget = BuildTarget.StandaloneWindows64;
 
         [LabelText("文件名样式")] public EditorPrefEnum<EFileNameStyle> FileNameStyle =
             new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.FileNameStyle", EFileNameStyle.BundleName_HashName);
 
-        [LabelText("构建后文件拷贝模式")]
-        public EditorPrefEnum<EBuildinFileCopyOption> BuildinFileCopyOption = 
-            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.BuildinFileCopyOption",EBuildinFileCopyOption.ClearAndCopyAll);
+        [LabelText("构建后文件拷贝模式")] public EditorPrefEnum<EBuildinFileCopyOption> BuildinFileCopyOption =
+            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.BuildinFileCopyOption",
+                EBuildinFileCopyOption.ClearAndCopyAll);
 
-        [LabelText("内置文件拷贝参数")]
-        public string BuildinFileCopyParams=string.Empty;
+        [LabelText("内置文件拷贝参数")] public string BuildinFileCopyParams = string.Empty;
 
         [LabelText("压缩选项")] public EditorPrefEnum<ECompressOption> CompressOption =
-            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.CompressOption",ECompressOption.LZ4);
-        
-        [LabelText("清空缓存文件")]
-        public EditorPrefBool  ClearBuildCacheFiles= 
-            new ("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.ClearBuildCacheFiles", true);
+            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.CompressOption", ECompressOption.LZ4);
 
-        [LabelText("使用依赖资源缓存数据库")]
-        public EditorPrefBool  UseAssetDependencyDB=
-            new ("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.UseAssetDependencyDB", true);
-        
-        [Button("构建所有包",ButtonSizes.Gigantic)]
+        [LabelText("清空缓存文件")] public EditorPrefBool ClearBuildCacheFiles =
+            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.ClearBuildCacheFiles", true);
+
+        [LabelText("使用依赖资源缓存数据库")] public EditorPrefBool UseAssetDependencyDB =
+            new("RSJWYFamework.Editor.YooAsset.YooAssetToolWindows.UseAssetDependencyDB", true);
+
+        [Button("构建所有包", ButtonSizes.Gigantic)]
         void BuildAllPackage()
         {
             foreach (var packageData in packageDataList)
@@ -71,16 +60,16 @@ namespace RSJWYFamework.Editor
                 }
             }
         }
-        
+
         /// <summary>
         /// 构建
         /// </summary>
         /// <param name="PackageName"></param>
         /// <param name="BuildPipeline"></param>
-        private BuildResult Build(string PackageName,EBuildPipeline BuildPipeline)
+        private BuildResult Build(string PackageName, EBuildPipeline BuildPipeline)
         {
             AppLogger.Log($"构建资源包：{PackageName}，构建管线为：{BuildPipeline}");
-            string packageName =PackageName;
+            string packageName = PackageName;
             string buildPipelineName = BuildPipeline.ToString();
             BuildResult buildResult;
             //模拟构建
@@ -94,8 +83,8 @@ namespace RSJWYFamework.Editor
                 buildParameters.BuildTarget = buildTarget;
                 buildParameters.PackageName = packageName;
                 buildParameters.PackageVersion = PackageVersion;
-                buildParameters.FileNameStyle =FileNameStyle;
-                buildParameters.BuildinFileCopyOption =BuildinFileCopyOption;
+                buildParameters.FileNameStyle = FileNameStyle;
+                buildParameters.BuildinFileCopyOption = BuildinFileCopyOption;
                 buildParameters.BuildinFileCopyParams = BuildinFileCopyParams;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
@@ -114,21 +103,21 @@ namespace RSJWYFamework.Editor
                 buildParameters.BuildinFileRoot = streamingAssetsRoot;
                 buildParameters.BuildPipeline = EBuildPipeline.ScriptableBuildPipeline.ToString();
                 buildParameters.BuildBundleType = (int)EBuildBundleType.AssetBundle;
-                buildParameters.BuildTarget =buildTarget;
+                buildParameters.BuildTarget = buildTarget;
                 buildParameters.PackageName = packageName;
                 buildParameters.PackageVersion = PackageVersion;
                 buildParameters.EnableSharePackRule = true;
                 buildParameters.VerifyBuildingResult = true;
-                buildParameters.FileNameStyle =FileNameStyle;
+                buildParameters.FileNameStyle = FileNameStyle;
                 buildParameters.BuildinFileCopyOption = BuildinFileCopyOption;
                 buildParameters.BuildinFileCopyParams = BuildinFileCopyParams;
                 buildParameters.CompressOption = CompressOption;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
                 buildParameters.BuiltinShadersBundleName = builtinShaderBundleName;
-                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
-                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
-                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
+                buildParameters.EncryptionServices =new EncryptPF();
+                buildParameters.ManifestProcessServices = new IYooAssets.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new IYooAssets.AppHotPackgaeManifestRestoreServices();
 
                 var pipeline = new ScriptableBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
@@ -136,7 +125,6 @@ namespace RSJWYFamework.Editor
             //内置构建管线
             else if (buildPipelineName == EBuildPipeline.BuiltinBuildPipeline.ToString())
             {
-
                 var buildParameters = new BuiltinBuildParameters();
                 buildParameters.BuildOutputRoot = buildoutputRoot;
                 buildParameters.BuildinFileRoot = streamingAssetsRoot;
@@ -148,25 +136,24 @@ namespace RSJWYFamework.Editor
                 buildParameters.EnableSharePackRule = true;
                 buildParameters.VerifyBuildingResult = true;
                 buildParameters.FileNameStyle = FileNameStyle;
-                buildParameters.BuildinFileCopyOption =BuildinFileCopyOption;
-                buildParameters.BuildinFileCopyParams =BuildinFileCopyParams;
-                buildParameters.CompressOption = CompressOption ;
+                buildParameters.BuildinFileCopyOption = BuildinFileCopyOption;
+                buildParameters.BuildinFileCopyParams = BuildinFileCopyParams;
+                buildParameters.CompressOption = CompressOption;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
-                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptPF();
-                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
-                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
-                
+                buildParameters.EncryptionServices = new EncryptPF();
+                buildParameters.ManifestProcessServices = new IYooAssets.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new IYooAssets.AppHotPackgaeManifestRestoreServices();
+
                 var pipeline = new BuiltinBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
             }
             //原生文件构建管线
             else if (buildPipelineName == EBuildPipeline.RawFileBuildPipeline.ToString())
             {
-
                 var buildParameters = new RawFileBuildParameters();
                 buildParameters.BuildOutputRoot = buildoutputRoot;
-                buildParameters.BuildinFileRoot =streamingAssetsRoot;
+                buildParameters.BuildinFileRoot = streamingAssetsRoot;
                 buildParameters.BuildPipeline = EBuildPipeline.RawFileBuildPipeline.ToString();
                 buildParameters.BuildBundleType = (int)EBuildBundleType.RawBundle;
                 buildParameters.BuildTarget = buildTarget;
@@ -175,13 +162,13 @@ namespace RSJWYFamework.Editor
                 buildParameters.VerifyBuildingResult = true;
                 buildParameters.FileNameStyle = FileNameStyle;
                 buildParameters.BuildinFileCopyOption = BuildinFileCopyOption;
-                buildParameters.BuildinFileCopyParams =BuildinFileCopyParams;
+                buildParameters.BuildinFileCopyParams = BuildinFileCopyParams;
                 buildParameters.ClearBuildCacheFiles = ClearBuildCacheFiles;
                 buildParameters.UseAssetDependencyDB = UseAssetDependencyDB;
-                buildParameters.EncryptionServices = new Utility.YooAsset.EncryptRF();
-                buildParameters.ManifestProcessServices = new Utility.YooAsset.AppHotPackgaeManifestProcessServices();
-                buildParameters.ManifestRestoreServices = new Utility.YooAsset.AppHotPackgaeManifestRestoreServices();
-                
+                buildParameters.EncryptionServices = new EncryptRF();
+                buildParameters.ManifestProcessServices = new IYooAssets.AppHotPackgaeManifestProcessServices();
+                buildParameters.ManifestRestoreServices = new IYooAssets.AppHotPackgaeManifestRestoreServices();
+
                 var pipeline = new RawFileBuildPipeline();
                 buildResult = pipeline.Run(buildParameters, false);
             }
@@ -192,14 +179,15 @@ namespace RSJWYFamework.Editor
 
             return buildResult;
         }
-        [Button("获取包名",ButtonSizes.Large)]
+
+        [Button("获取包名", ButtonSizes.Large)]
         [BoxGroup("包列表")]
         public void GetAppConfigToPackageData()
         {
             packageDataList.Clear();
-            foreach (var packages in appConfig.YooAssetPackageData )
+            foreach (var packages in appConfig.YooAssetPackageData)
             {
-                var _package=new YooAssetPackageDataEditor();
+                var _package = new YooAssetPackageDataEditor();
                 _package.PackageName = packages.PackageName;
                 _package.PackageTips = packages.PackageTips;
                 //获取上次存储的管线设置
@@ -211,7 +199,6 @@ namespace RSJWYFamework.Editor
                 }
                 else
                 {
-                    
                     if (Enum.TryParse<EBuildPipeline>(_YooAssetPackageDataEditorData, out var buildPipeline))
                     {
                         _package.BuildPipeline = buildPipeline;
@@ -221,12 +208,14 @@ namespace RSJWYFamework.Editor
                         _package.BuildPipeline = EBuildPipeline.BuiltinBuildPipeline;
                     }
                 }
+
                 packageDataList.Add(_package);
             }
+
             AppLogger.Log("载入上次配置的构建管线");
         }
 
-        
+
         [MenuItem("RSJWYFamework/打开YooAsset资源构建工具")]
         public static void OpenYooAssetBuildWindowsA()
         {
@@ -234,19 +223,20 @@ namespace RSJWYFamework.Editor
             _windows.titleContent = new GUIContent("YooAsset资源构建工具");
             _windows.Show();
         }
+
         protected override void OnEnable()
         {
             base.OnEnable();
             buildoutputRoot = AssetBundleBuilderHelper.GetDefaultBuildOutputRoot();
             streamingAssetsRoot = AssetBundleBuilderHelper.GetStreamingAssetsRoot();
             var appSB = UtilityEditor.GetSettingConfigList<AppConfig>();
-            if (appSB.Count!=1)
+            if (appSB.Count != 1)
             {
                 AppLogger.Warning($"App配置文件不存在或者不唯一！数量：{appSB.Count}");
             }
             else
             {
-                appConfig=appSB[0];
+                appConfig = appSB[0];
                 GetAppConfigToPackageData();
             }
         }
@@ -260,6 +250,70 @@ namespace RSJWYFamework.Editor
                 EditorPrefs.SetString($"YooAssetToolWindows_{packages.PackageName}", packages.BuildPipeline.ToString());
             }
         }
-        
+
+        /// <summary>
+        /// 加密资源包-原生资源
+        /// </summary>
+        public class EncryptRF : IEncryptionServices
+        {
+            private string aeskey;
+
+            public EncryptRF() : base()
+            {
+                aeskey = Resources.Load<AppConfig>("AppConfig").AESKey;
+            }
+
+            public EncryptResult Encrypt(EncryptFileInfo fileInfo)
+            {
+                // 注意：针对特定规则加密
+                if (fileInfo.BundleName.Contains("_HoteCodeEncryptionUse"))
+                {
+                    AppLogger.Log($"加密文件{fileInfo.BundleName}");
+                    byte[] fileData = File.ReadAllBytes(fileInfo.FileLoadPath);
+                    var edata = Utility.AESTool.AESEncrypt(fileData, aeskey);
+                    EncryptResult result = new EncryptResult
+                    {
+                        Encrypted = true,
+                        EncryptedData = edata
+                    };
+                    return result;
+                }
+                else
+                {
+                    return new EncryptResult
+                    {
+                        Encrypted = false
+                    };
+                }
+            }
+        }
+
+        /// <summary>
+        /// 加密资源包-资源文件
+        /// </summary>
+        public class EncryptPF : IEncryptionServices
+        {
+            private string aeskey;
+
+            public EncryptPF() : base()
+            {
+                aeskey = Resources.Load<AppConfig>("AppConfig").AESKey;
+            }
+
+            public EncryptResult Encrypt(EncryptFileInfo fileInfo)
+            {
+                // 注意：针对特定规则加密
+                AppLogger.Log($"加密文件{fileInfo.BundleName}");
+                byte[] fileData = File.ReadAllBytes(fileInfo.FileLoadPath);
+
+                var edata = Utility.AESTool.AESEncrypt(fileData, aeskey);
+
+                return new EncryptResult
+                {
+                    Encrypted = true,
+                    EncryptedData = edata
+                };
+            }
+        }
     }
 }

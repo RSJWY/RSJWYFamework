@@ -35,7 +35,7 @@ namespace RSJWYFamework.Runtime
                 throw new AppException($"运行模式：{playMode} 目前不支持，初始化失败");
             }
             //初始化资源解密服务
-            var fileDecryption = new Utility.YooAsset.AppHotPackageFileDecryption();
+            var fileDecryption = new IYooAssets.AppHotPackageFileDecryption();
             
             // 创建资源包裹类
             var package = YooAssets.TryGetPackage(packageName);
@@ -67,7 +67,7 @@ namespace RSJWYFamework.Runtime
                 //无论成功与否，使用统一的远端目录
                 string defaultHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
                 string fallbackHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
-                IRemoteServices remoteServices = new Utility.YooAsset.RemoteServices(defaultHostServer, fallbackHostServer);
+                IRemoteServices remoteServices = new IYooAssets.RemoteServices(defaultHostServer, fallbackHostServer);
                 var createParameters = new HostPlayModeParameters();
                 createParameters.BuildinFileSystemParameters = 
                     FileSystemParameters.CreateDefaultBuildinFileSystemParameters(fileDecryption);

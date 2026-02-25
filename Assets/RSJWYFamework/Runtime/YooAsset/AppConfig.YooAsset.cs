@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using UnityEngine.Serialization;
 using YooAsset;
 
 namespace RSJWYFamework.Runtime
@@ -38,10 +39,15 @@ namespace RSJWYFamework.Runtime
         // TODO: 当模式为 ClearBundleFilesByLocations 时，需要在这里填写具体的资源路径
         public List<string> ClearLocations = new List<string>();
 
+        [FoldoutGroup("YooAssetInfo")] 
+        [LabelText("项目运行环境")]
+        public Utility.YooAsset.BuildEnvironment buildEnv= Utility.YooAsset.BuildEnvironment.Dev;
+        
         [BoxGroup("YooAssetInfo/清理配置")]
         [LabelText("指定清理标签列表")]
         [ShowIf("FileClearMode", EFileClearMode.ClearBundleFilesByTags)]
         // TODO: 当模式为 ClearBundleFilesByTags 时，需要在这里填写具体的资源标签
         public List<string> ClearTags = new List<string>();
+        
     }
 }
