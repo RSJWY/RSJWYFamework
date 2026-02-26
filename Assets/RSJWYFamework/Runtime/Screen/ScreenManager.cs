@@ -4,7 +4,8 @@ using UnityEngine;
 
 namespace RSJWYFamework.Runtime
 {
-    [Module] [ModuleDependency(typeof(AppConfigManager))]
+    //[Module] 
+    [ModuleDependency(typeof(AppConfigManager))]
     public class ScreenManager:ModuleBase
     {
         /// <summary>

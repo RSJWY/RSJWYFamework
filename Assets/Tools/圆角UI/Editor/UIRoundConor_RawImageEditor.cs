@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using RSJWYFamework.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -114,3 +115,4 @@ namespace RSJWYFamework.Editor
         }
     }
 }
+#endif

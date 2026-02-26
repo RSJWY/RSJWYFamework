@@ -35,7 +35,7 @@ namespace RSJWYFamework.Runtime
         public Action<YooAsset.AsyncOperationBase> OnClearCacheFiles;
         
         
-        public LoadPackagesAsyncOperation(string packageName, EPlayMode playMode)
+        public LoadPackagesAsyncOperation(YooAssetPackageData packageData, EPlayMode playMode)
         {
             var sm = new StateMachine<LoadPackagesAsyncOperation>(this,"初始化资源管理");
             // 创建状态机
@@ -53,9 +53,18 @@ namespace RSJWYFamework.Runtime
             
             //写入数据
             sm.SetBlackboardValue("PlayMode",playMode);
-            sm.SetBlackboardValue("PackageName",packageName);
+            sm.SetBlackboardValue("PackageName",packageData.packageName);
+            sm.SetBlackboardValue("PackageData",packageData);
             
             InitStateMachine(sm, typeof(InitPackageNode));
+        }
+
+        public IRemoteServices SetRemoteService()
+        {
+            string defaultHostServer =  Utility.YooAsset.GetHostServerURL("");
+            string fallbackHostServer =  Utility.YooAsset.GetHostServerURL("");
+            IRemoteServices remoteServices = new IYooAssets.RemoteServices(defaultHostServer, fallbackHostServer);
+            return remoteServices;
         }
 
     }

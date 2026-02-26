@@ -21,24 +21,25 @@ namespace RSJWYFamework.Runtime
             AppLogger.Log($"清理未使用的缓存文件");
             var packageName = (string)_sm.GetBlackboardValue("PackageName");
             var package = YooAssets.GetPackage(packageName);
+            var packageData = (YooAssetPackageData)_sm.GetBlackboardValue("PackageData");
 
             ClearCacheFilesOperation operation = null;
             // 根据配置选择不同的清理模式
-            switch (Utility.YooAsset.FileClearMode)
+            switch (packageData.fileClearMode)
             {
                 case EFileClearMode.ClearBundleFilesByLocations:
-                    var locations = Utility.YooAsset.ClearLocations.ToArray();
-                    AppLogger.Log($"清理指定路径缓存: {string.Join(", ", locations)}");
-                    operation = package.ClearCacheFilesAsync(Utility.YooAsset.FileClearMode, locations);
+                    AppLogger.Log($"包：{packageName}清理-指定路径缓存");
+                    var locations = packageData.clearLocations.ToArray();
+                    operation = package.ClearCacheFilesAsync(packageData.fileClearMode, locations);
                     break;
                 case EFileClearMode.ClearBundleFilesByTags:
-                    var tags = Utility.YooAsset.ClearTags.ToArray();
-                    AppLogger.Log($"清理指定标签缓存: {string.Join(", ", tags)}");
-                    operation = package.ClearCacheFilesAsync(Utility.YooAsset.FileClearMode, tags);
+                    AppLogger.Log($"包：{packageName}清理-指定标签缓存");
+                    var tags = packageData.clearTags.ToArray();
+                    operation = package.ClearCacheFilesAsync(packageData.fileClearMode, tags);
                     break;
                 default:
-                    AppLogger.Log($"清理缓存模式: {Utility.YooAsset.FileClearMode}");
-                    operation = package.ClearCacheFilesAsync(Utility.YooAsset.FileClearMode);
+                    AppLogger.Log($"包：{packageName}清理缓存模式: {packageData.fileClearMode}");
+                    operation = package.ClearCacheFilesAsync(packageData.fileClearMode);
                     break;
             }
             

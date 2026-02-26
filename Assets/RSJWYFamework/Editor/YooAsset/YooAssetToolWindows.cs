@@ -13,7 +13,7 @@ namespace RSJWYFamework.Editor
 {
     public class YooAssetToolWindows : OdinEditorWindow
     {
-        [ReadOnly] [LabelText("配置文件")] public AppConfig appConfig;
+        [ReadOnly] [LabelText("配置文件")] public Runtime.AppConfig AppConfig;
 
         [LabelText("包列表数据")] [BoxGroup("包列表")] [ShowInInspector]
         public List<YooAssetPackageDataEditor> packageDataList = new();
@@ -49,14 +49,14 @@ namespace RSJWYFamework.Editor
         {
             foreach (var packageData in packageDataList)
             {
-                var result = Build(packageData.PackageName, packageData.BuildPipeline);
+                var result = Build(packageData.packageName, packageData.BuildPipeline);
                 if (result.Success)
                 {
-                    AppLogger.Log($"包：{packageData.PackageName}构建成功");
+                    AppLogger.Log($"包：{packageData.packageName}构建成功");
                 }
                 else
                 {
-                    AppLogger.Error($"包：{packageData.PackageName}构建失败！\n{result.ErrorInfo}");
+                    AppLogger.Error($"包：{packageData.packageName}构建失败！\n{result.ErrorInfo}");
                 }
             }
         }
@@ -185,14 +185,14 @@ namespace RSJWYFamework.Editor
         public void GetAppConfigToPackageData()
         {
             packageDataList.Clear();
-            foreach (var packages in appConfig.YooAssetPackageData)
+            foreach (var packages in AppConfig.YooAssetPackageData)
             {
                 var _package = new YooAssetPackageDataEditor();
-                _package.PackageName = packages.PackageName;
-                _package.PackageTips = packages.PackageTips;
+                _package.packageName = packages.packageName;
+                _package.packageDesc = packages.packageDesc;
                 //获取上次存储的管线设置
                 var _YooAssetPackageDataEditorData =
-                    EditorPrefs.GetString($"YooAssetToolWindows_{_package.PackageName}");
+                    EditorPrefs.GetString($"YooAssetToolWindows_{_package.packageName}");
                 if (string.IsNullOrEmpty(_YooAssetPackageDataEditorData))
                 {
                     _package.BuildPipeline = EBuildPipeline.BuiltinBuildPipeline;
@@ -236,7 +236,7 @@ namespace RSJWYFamework.Editor
             }
             else
             {
-                appConfig = appSB[0];
+                AppConfig = appSB[0];
                 GetAppConfigToPackageData();
             }
         }
@@ -247,7 +247,7 @@ namespace RSJWYFamework.Editor
             //存储构建管线
             foreach (var packages in packageDataList)
             {
-                EditorPrefs.SetString($"YooAssetToolWindows_{packages.PackageName}", packages.BuildPipeline.ToString());
+                EditorPrefs.SetString($"YooAssetToolWindows_{packages.packageName}", packages.BuildPipeline.ToString());
             }
         }
 

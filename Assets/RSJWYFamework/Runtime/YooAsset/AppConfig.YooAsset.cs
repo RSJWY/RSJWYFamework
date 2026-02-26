@@ -21,33 +21,18 @@ namespace RSJWYFamework.Runtime
         [BoxGroup("YooAssetInfo/Host配置")]
         [LabelText("资源根地址")]
         [ShowIf("PlayMode", EPlayMode.HostPlayMode)]
-        public string hostServerIP = "http://127.0.0.1";
+        public string hostServerAddr = "http://127.0.0.1";
         
         [BoxGroup("YooAssetInfo/覆盖安装")]
         [LabelText("覆盖安装清理模式")]
         [ShowIf("PlayMode", EPlayMode.HostPlayMode)]
         public EOverwriteInstallClearMode  OverwriteInstallClearMode = EOverwriteInstallClearMode.ClearAllCacheFiles;
         
-        [BoxGroup("YooAssetInfo/清理配置")]
-        [LabelText("文件清理模式")]
-        // TODO: 这里的 EFileClearMode 需要确保引用了 YooAsset 命名空间
-        public EFileClearMode FileClearMode = EFileClearMode.ClearAllBundleFiles;
-
-        [BoxGroup("YooAssetInfo/清理配置")]
-        [LabelText("指定清理路径列表")]
-        [ShowIf("FileClearMode", EFileClearMode.ClearBundleFilesByLocations)]
-        // TODO: 当模式为 ClearBundleFilesByLocations 时，需要在这里填写具体的资源路径
-        public List<string> ClearLocations = new List<string>();
 
         [FoldoutGroup("YooAssetInfo")] 
         [LabelText("项目运行环境")]
-        public Utility.YooAsset.BuildEnvironment buildEnv= Utility.YooAsset.BuildEnvironment.Dev;
+        public Utility.YooAsset.BuildEnvironment buildEnv= Utility.YooAsset.BuildEnvironment.None;
         
-        [BoxGroup("YooAssetInfo/清理配置")]
-        [LabelText("指定清理标签列表")]
-        [ShowIf("FileClearMode", EFileClearMode.ClearBundleFilesByTags)]
-        // TODO: 当模式为 ClearBundleFilesByTags 时，需要在这里填写具体的资源标签
-        public List<string> ClearTags = new List<string>();
         
     }
 }

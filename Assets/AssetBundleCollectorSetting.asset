@@ -24,7 +24,20 @@ MonoBehaviour:
     IncludeAssetGUID: 0
     AutoCollectShaders: 1
     IgnoreRuleName: NormalIgnoreRule
-    Groups: []
+    Groups:
+    - GroupName: Test
+      GroupDesc: 
+      AssetTags: 
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/HotUpdateAssets/Prefab
+        CollectorGUID: fb065cf7de58564468f74eb07a72bdf1
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: 
+        UserData: 
   - PackageName: RawFilePackage
     PackageDesc: 
     EnableAddressable: 0
@@ -39,11 +52,27 @@ MonoBehaviour:
       AssetTags: 
       ActiveRuleName: EnableGroup
       Collectors:
-      - CollectPath: 
-        CollectorGUID: 
+      - CollectPath: Assets/HotUpdateAssets/HotCode/HotCode
+        CollectorGUID: 76972ec28f768604b8f40370193552df
         CollectorType: 0
         AddressRuleName: AddressByFileName
         PackRuleName: PackRawFile
+        FilterRuleName: CollectAll
+        AssetTags: 
+        UserData: 
+      - CollectPath: Assets/HotUpdateAssets/HotCode/MetadataForAOTAssemblies
+        CollectorGUID: 1d78f45d8634ca84eb555124c9e02219
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: 
+        UserData: 
+      - CollectPath: Assets/HotUpdateAssets/HotCode/List
+        CollectorGUID: bc390543236b9ae42b8fdc1b75aae958
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
         FilterRuleName: CollectAll
         AssetTags: 
         UserData: 

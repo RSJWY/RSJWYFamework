@@ -18,14 +18,20 @@ MonoBehaviour:
   Loglevel: 4
   AESKey: AA
   UpdatePackageVersionNumberOfRetries: 3
+  DemoModule_IsEnabled: 1
+  DemoModule_MaxRetry: 5
   YooAssetPackageData:
-  - PackageName: PrefabPackage
-    PackageTips: 
-  - PackageName: RawFilePackage
-    PackageTips: 
+  - packageName: PrefabPackage
+    packageDesc: 
+    fileClearMode: 0
+    clearTags: []
+    clearLocations: []
+  - packageName: RawFilePackage
+    packageDesc: 
+    fileClearMode: 0
+    clearTags: []
+    clearLocations: []
   PlayMode: 0
-  hostServerIP: http://127.0.0.1
+  hostServerAddr: http://127.0.0.1
   OverwriteInstallClearMode: 1
-  FileClearMode: 0
-  ClearLocations: []
-  ClearTags: []
+  buildEnv: 0

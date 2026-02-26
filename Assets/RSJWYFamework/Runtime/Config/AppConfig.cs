@@ -1,5 +1,4 @@
 using Sirenix.OdinInspector;
-using UnityEditor;
 using UnityEngine;
 
 namespace RSJWYFamework.Runtime
@@ -24,17 +23,6 @@ namespace RSJWYFamework.Runtime
         /// </summary>
         [LabelText("更新资源包版本重试次数")]
         public int UpdatePackageVersionNumberOfRetries = 3;
-
-#if UNITY_EDITOR
-        [Button("设置项目参数")]
-        public void SetSetting()
-        {
-            PlayerSettings.companyName = ProjectName;
-            PlayerSettings.productName = APPName;
-            PlayerSettings.bundleVersion = Version;
-            Debug.Log("参数设置完成");
-        }
-#endif
     }
 }
 
