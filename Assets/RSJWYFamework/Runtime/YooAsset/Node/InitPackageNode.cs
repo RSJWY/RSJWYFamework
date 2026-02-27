@@ -65,16 +65,14 @@ namespace RSJWYFamework.Runtime
             if (playMode == EPlayMode.HostPlayMode)
             {
                 //无论成功与否，使用统一的远端目录
-                string defaultHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
-                string fallbackHostServer =  Utility.YooAsset.GetHostServerURL(packageName);
-                IRemoteServices remoteServices = new IYooAssets.RemoteServices(defaultHostServer, fallbackHostServer);
+                var remoteservice = (IYooAssets.RemoteServices)_sm.GetBlackboardValue("RemoteService");
                 var createParameters = new HostPlayModeParameters();
                 createParameters.BuildinFileSystemParameters = 
                     FileSystemParameters.CreateDefaultBuildinFileSystemParameters(fileDecryption);
                 //拷贝内置清单到资源目录
                 createParameters.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.COPY_BUILDIN_PACKAGE_MANIFEST, true);
                 createParameters.CacheFileSystemParameters = 
-                    FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices,fileDecryption);
+                    FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteservice,fileDecryption);
                 //覆盖安装内资资源清单拷贝问题
                 createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.INSTALL_CLEAR_MODE, Utility.YooAsset.InstallClearMode);
                 initializationOperation = package.InitializeAsync(createParameters);

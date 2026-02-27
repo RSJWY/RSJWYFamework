@@ -50,19 +50,23 @@ namespace RSJWYFamework.Runtime
             sm.AddNode(new UpdaterDoneNode());
             //检查本地资源版本，弱联网将检查上次下载的版本
             sm.AddNode(new CheckLocalAssetsVersionNode());
+
+            var remoteservice = SetRemoteService(packageData.packageName);
             
             //写入数据
             sm.SetBlackboardValue("PlayMode",playMode);
             sm.SetBlackboardValue("PackageName",packageData.packageName);
             sm.SetBlackboardValue("PackageData",packageData);
+            sm.SetBlackboardValue("RemoteService",remoteservice);
+            
             
             InitStateMachine(sm, typeof(InitPackageNode));
         }
 
-        public IRemoteServices SetRemoteService()
+        public IRemoteServices SetRemoteService(string  packgaeName)
         {
-            string defaultHostServer =  Utility.YooAsset.GetHostServerURL("");
-            string fallbackHostServer =  Utility.YooAsset.GetHostServerURL("");
+            string defaultHostServer =  Utility.YooAsset.GetHostServerURL(packgaeName);
+            string fallbackHostServer =  Utility.YooAsset.GetHostServerURL(packgaeName);
             IRemoteServices remoteServices = new IYooAssets.RemoteServices(defaultHostServer, fallbackHostServer);
             return remoteServices;
         }
