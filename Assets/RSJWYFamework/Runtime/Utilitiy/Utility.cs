@@ -127,5 +127,56 @@ namespace RSJWYFamework.Runtime
         {
             return Mathf.Clamp01((float)current / total);
         }
+        /// <summary>
+        /// 排除指定项
+        /// </summary>
+        public static List<T> GetRandomItems<T>(List<T> list, T excludeItem, int count)
+        {
+            var random = new Random();
+
+            return list
+                .Where(x => !EqualityComparer<T>.Default.Equals(x, excludeItem)) // 排除指定项
+                .OrderBy(x => random.Next()) // 打乱顺序
+                .Take(count) // 取10条
+                .ToList();
+
+             var random = new Random();
+            //性能好的写法
+            // // 先过滤
+            // var filtered = list
+            //     .Where(x => !EqualityComparer<T>.Default.Equals(x, excludeItem))
+            //     .ToList();
+
+            // // Fisher-Yates 洗牌
+            // for (int i = filtered.Count - 1; i > 0; i--)
+            // {
+            //     int j = random.Next(i + 1);
+            //     (filtered[i], filtered[j]) = (filtered[j], filtered[i]);
+            // }
+
+            // return filtered.Take(count).ToList();
+        }
+         /// <summary>
+        /// 必须包含某条数据
+        /// </summary>
+        public static List<T> GetRandomItemsInclude<T>(List<T> list, T includeItem, int count)
+        {
+            var random = new Random();
+
+            // 先排除 includeItem，避免重复
+            var filtered = list
+                .Where(x => !EqualityComparer<T>.Default.Equals(x, includeItem))
+                .OrderBy(x => random.Next())
+                .Take(count - 1) // 留一个位置给 includeItem
+                .ToList();
+
+            // 如果原列表里确实有这个元素，再加进去
+            if (list.Contains(includeItem))
+            {
+                filtered.Add(includeItem);
+            }
+
+            return filtered;
+        }
     }
 }
