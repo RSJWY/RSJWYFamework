@@ -127,5 +127,128 @@ namespace RSJWYFamework.Runtime
         {
             return Mathf.Clamp01((float)current / total);
         }
+        /// <summary>
+        /// 排除指定项
+        /// </summary>
+        public static List<T> GetRandomItems<T>(List<T> list, T excludeItem, int count)
+        {
+            var random = new Random();
+
+            return list
+                .Where(x => !EqualityComparer<T>.Default.Equals(x, excludeItem)) // 排除指定项
+                .OrderBy(x => random.Next()) // 打乱顺序
+                .Take(count) // 取10条
+                .ToList();
+
+             var random = new Random();
+            //性能好的写法
+            // // 先过滤
+            // var filtered = list
+            //     .Where(x => !EqualityComparer<T>.Default.Equals(x, excludeItem))
+            //     .ToList();
+
+            // // Fisher-Yates 洗牌
+            // for (int i = filtered.Count - 1; i > 0; i--)
+            // {
+            //     int j = random.Next(i + 1);
+            //     (filtered[i], filtered[j]) = (filtered[j], filtered[i]);
+            // }
+
+            // return filtered.Take(count).ToList();
+        }
+         /// <summary>
+        /// 必须包含某条数据
+        /// </summary>
+        public static List<T> GetRandomItemsInclude<T>(List<T> list, T includeItem, int count)
+        {
+            var random = new Random();
+
+            // 先排除 includeItem，避免重复
+            var filtered = list
+                .Where(x => !EqualityComparer<T>.Default.Equals(x, includeItem))
+                .OrderBy(x => random.Next())
+                .Take(count - 1) // 留一个位置给 includeItem
+                .ToList();
+
+            // 如果原列表里确实有这个元素，再加进去
+            if (list.Contains(includeItem))
+            {
+                filtered.Add(includeItem);
+            }
+
+            return filtered;
+        }
+        /// <summary>
+        /// 让 RawImage 保持宽高比，并限制在父节点内
+        /// </summary>
+        public static void FitRawImageInParent(RawImage rawImage)
+        {
+            if (rawImage == null || rawImage.texture == null)
+                return;
+
+            RectTransform parent = rawImage.transform.parent as RectTransform;
+            if (parent == null)
+                return;
+
+            RectTransform rt = rawImage.rectTransform;
+
+            float parentWidth = parent.rect.width;
+            float parentHeight = parent.rect.height;
+
+            float texWidth = rawImage.texture.width;
+            float texHeight = rawImage.texture.height;
+
+            // 核心：取最小缩放比例
+            float scale = Mathf.Min(parentWidth / texWidth, parentHeight / texHeight);
+
+            float newWidth = texWidth * scale;
+            float newHeight = texHeight * scale;
+
+            rt.sizeDelta = new Vector2(newWidth, newHeight);
+
+            // 可选：居中
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+        }
+        /// <summary>
+        /// RawImage 等比缩放适应父节点 + 留边
+        /// </summary>
+        public static void FitRawImageInParent(RawImage rawImage, Vector4 padding)
+        {
+            // padding: 左, 上, 右, 下
+            if (rawImage == null || rawImage.texture == null)
+                return;
+
+            RectTransform parent = rawImage.transform.parent as RectTransform;
+            if (parent == null)
+                return;
+
+            RectTransform rt = rawImage.rectTransform;
+
+            float parentWidth = parent.rect.width;
+            float parentHeight = parent.rect.height;
+
+            // 扣除留边
+            float availableWidth = parentWidth - padding.x - padding.z;
+            float availableHeight = parentHeight - padding.y - padding.w;
+
+            float texWidth = rawImage.texture.width;
+            float texHeight = rawImage.texture.height;
+
+            float scale = Mathf.Min(availableWidth / texWidth, availableHeight / texHeight);
+
+            float newWidth = texWidth * scale;
+            float newHeight = texHeight * scale;
+
+            rt.sizeDelta = new Vector2(newWidth, newHeight);
+
+            // 👉 关键：位置要考虑 padding 偏移
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+
+            float offsetX = (padding.x - padding.z) * 0.5f;
+            float offsetY = (padding.w - padding.y) * 0.5f;
+
+            rt.anchoredPosition = new Vector2(offsetX, offsetY);
+        }
     }
 }
